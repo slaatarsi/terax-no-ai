@@ -4,6 +4,12 @@ Gates for shipping the libghostty + WebGPU terminal (0.9.0). Automated checks
 alone do not establish platform parity or multi-day stability; the manual gates
 below do.
 
+This AI-agent-free fork inherits the verification record below from earlier
+revisions; it has not been revalidated merely by updating documentation. Workloads
+called agents are manually launched CLI/TUI programs or synthetic benchmarks,
+not built-in features. Upstream releases and signatures do not establish fork
+release readiness.
+
 ## Verified on macOS (M4, macOS 26)
 
 - Frontend: lint (no new warnings), types, all vitest suites, production build,
@@ -23,9 +29,9 @@ below do.
 | --- | --- |
 | Windows (WebView2, ConPTY) | Installer, text crispness at 125/150 %, contrast defaults, `terax-pty` long-poll, IME, AltGr, pwsh/cmd/WSL, resize behaviour (burst heuristic, no native live-resize signal). |
 | Linux (WebKitGTK 4.1) | Package install, WebGPU or WebGL path, `terax-pty` POST bodies, IME, resize. |
-| Long sessions | A multi-hour daily-use run with agents on the release build; memory must return to its floor after tab switches, drags and occlusion. |
+| Long sessions | A multi-hour daily-use run with streaming CLI/TUI workloads on the release build; memory must return to its floor after tab switches, drags and occlusion. |
 | Accessibility | VoiceOver smoke test (the terminal input holds a selected placeholder character). |
-| Updater | Signed release artifacts and update from the previous beta. |
+| Updater | Establish fork-specific release endpoints, signing/verification keys, and application identity policy; validate signed fork artifacts and upgrades. The current endpoint still targets upstream and can replace this fork. |
 
 ## Platform configuration
 

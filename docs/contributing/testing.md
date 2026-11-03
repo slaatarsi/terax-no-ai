@@ -26,7 +26,7 @@ If you do not have `cargo-nextest` installed, `cargo test --locked` is the local
 - Workspace authorization (both the allow and deny side)
 - Git command layer (repo-root resolution, pathspec/argument guards, status parsing)
 - Filesystem mutation (atomic writes, symlink handling, no-data-loss on partial failure)
-- IPC command surface and AI tool surface
+- IPC command surface and authenticated local CLI control
 - Pure logic with wide reach (cwd inheritance, tab/split tree transforms, OSC/prompt parsing, command guard)
 
 The bar is real coverage of the contract, not a placeholder. Test the edge, the deny path, the "what happens one level above home".
@@ -43,7 +43,7 @@ A good test locks the invariant you are relying on. Examples from the codebase:
 - `src-tauri/src/modules/pty/job.rs` tests verify that dropping the Job Object kills the assigned process tree on Windows.
 - `src-tauri/src/modules/pty/session.rs` tests verify that dropping a `Session` kills the child process.
 - `src-tauri/src/modules/pty/shell_init.rs` tests verify shell classification and WSL fish launch specs.
-- `src/modules/ai/lib/security.ts` is exercised by tests that assert specific paths are refused and that canonicalization catches symlink traversal.
+- Workspace and filesystem tests must cover unauthorized paths and symlink escapes; no AI tool security module remains in this fork.
 
 ## Cross-platform PTY tests
 
@@ -61,13 +61,13 @@ Tests for ConPTY/Job Object belong behind `#[cfg(windows)]`; tests for Unix PTY 
 
 ## Security function tests
 
-When testing `src/modules/ai/lib/security.ts` or the Rust equivalents, cover:
+When testing the Rust workspace, filesystem, and Git boundaries, cover:
 
-1. The literal path is refused.
-2. The canonicalized path is re-refused (symlink case).
-3. Case variants match on case-insensitive filesystems.
-4. NTFS alternate data streams and trailing dot/space variants are normalized.
-5. Write-only deny prefixes block writes but allow reads where appropriate.
+1. Authorized roots and their allowed descendants succeed.
+2. Unauthorized paths and symlink escapes are refused after canonicalization.
+3. Path handling respects case-insensitive filesystems and Windows separators.
+4. Invalid path arguments and Git pathspec/option injection are refused.
+5. Failed mutations preserve existing data and report partial failures accurately.
 
 ## Invariants
 

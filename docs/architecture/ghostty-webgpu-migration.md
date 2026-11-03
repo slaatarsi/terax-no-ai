@@ -1,7 +1,10 @@
 # Ghostty terminal migration
 
 This is the original migration design and staged implementation record. Its
-milestones and fallback descriptions are historical. Current implementation and
+milestones and fallback descriptions are historical. References to AI behavior
+and APIs describe the upstream design, not this AI-agent-free fork. The AI
+subsystem has been removed; do not use those historical entries as current
+requirements. Current implementation and
 release gates are maintained in [release readiness](ghostty-release-readiness.md)
 and [renderer ownership](terminal-renderer-pool.md).
 

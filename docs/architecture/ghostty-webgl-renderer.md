@@ -226,9 +226,9 @@ production certification. Shipping either path as Terax's stable default still
 requires the compatibility matrix in `ghostty-webgpu-migration.md` and repeated
 release-build benchmarks against the other backends.
 
-The key AI-agent workloads are:
+The key terminal/TUI workloads are (external CLIs run manually, not built-in agents):
 
-1. Codex and Claude Code streaming for at least one hour.
+1. Sustained streaming CLI output for at least one hour, optionally using manually launched Codex or Claude Code.
 2. Long synchronized-output animations and frequent cursor updates.
 3. One, three, five, ten, and twenty live tabs with only visible panes leased.
 4. Hidden output followed by rapid tab switching.

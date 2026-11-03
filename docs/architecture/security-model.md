@@ -14,6 +14,10 @@ Terax runs user-selected shells and tools and reads and writes local files. It h
 - **CLI control plane**: local control requests retain authentication, caller targeting, bounded framing, and command validation. `open_directory` explicitly grants workspace authorization for its validated target, equivalent to choosing a terminal directory; ordinary editor `open` remains read-only with respect to authorization. Token holders have this directory-opening authority. See `cli-control.md`.
 - **Resource limits**: one-shot formatter commands retain timeout and output bounds. PTY, LSP, and capture processes retain their platform-specific process cleanup.
 
+## Fork distribution boundary
+
+This is the independently modified [slaatarsi/terax-no-ai](https://github.com/slaatarsi/terax-no-ai) fork of [crynta/terax-ai](https://github.com/crynta/terax-ai). The updater endpoint, verification key, and application identities remain inherited from upstream. An authenticated upstream update can still replace this AI-free version; signature validity is not fork provenance. See [SECURITY.md](../../SECURITY.md) for reporting and distribution limitations.
+
 ## Removed AI data
 
 Existing conversations, provider settings, and credentials are not loaded, migrated, or deleted. External agent configurations and previously installed hooks are not automatically edited. New terminals no longer set `TERAX_TERMINAL`, and the agent notification listener is gone. Users may still run external AI CLIs manually as ordinary shell programs.

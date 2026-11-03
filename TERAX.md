@@ -4,7 +4,9 @@ This is the project's living architecture doc. Read it before making changes; Te
 
 ## Project
 
-**Terax**: open-source terminal-first development workspace. Tauri 2 + Rust (`portable-pty`) backend, React 19 + TypeScript + libghostty-vt WASM client (WebGPU, Terax WebGL fallback). Terminal, explorer, Git, editor/LSP, Markdown, and browser previews remain. There are no built-in AI or agent integrations.
+**Terax**: an AI-agent-free terminal with a folder explorer and Git tracking. This version is forked from [crynta/terax-ai](https://github.com/crynta/terax-ai), modified, and maintained separately in [slaatarsi/terax-no-ai](https://github.com/slaatarsi/terax-no-ai). Credit for the original project belongs to Crynta and the upstream contributors.
+
+Implementation: Tauri 2 + Rust (`portable-pty`) backend, React 19 + TypeScript + libghostty-vt WASM client (WebGPU, Terax WebGL fallback). Terminal, explorer, Git, editor/LSP, Markdown, and browser previews remain. There are no built-in AI or agent integrations.
 
 Existing AI conversations, provider settings, credentials, and external agent configurations are left untouched but not loaded. External agent hooks are not uninstalled automatically. Ordinary CLI programs still run manually; Terax no longer sets `TERAX_TERMINAL`, installs agent hooks, detects agents, or starts AI services.
 
@@ -424,7 +426,7 @@ Shared Git and workspace IPC types and helpers live in `src/lib/native.ts`. Mark
   - **Linux**: deb depends `libwebkit2gtk-4.1-0`, `libgtk-3-0`; rpm `webkit2gtk4.1`, `gtk3`; AppImage bundles its media framework.
   - **Windows**: NSIS installer in `currentUser` mode (no admin required), WebView2 via `downloadBootstrapper`. Installing a missing WebView2 runtime requires internet access; there is no bundled offline runtime. Packaged and offline-install validation remains in the release-readiness gates.
 - **Windows Explorer**: `src-tauri/windows-shell/` implements a Windows 11 COM command and sparse MSIX. `open_directory` extends the existing authenticated control channel; explicit directory terminals use non-persisted `requireCwd` semantics instead of silently falling back home. NSIS/MSI registration and pre-installer MSIX/DLL signing are wired, but real signed-install Explorer acceptance remains pending. See `docs/architecture/windows-explorer.md` for release prerequisites and MSI scope limits.
-- Auto-updater configured with a public minisign key; release artifacts at `https://github.com/crynta/terax-ai/releases/latest/download/latest.json`.
+- Auto-updater still uses the upstream public minisign key and `https://github.com/crynta/terax-ai/releases/latest/download/latest.json`. This is not a fork release channel: accepting an upstream update may replace this AI-free fork. Fork-specific update/signing infrastructure and application identity isolation are not established by these documentation changes. See [README.md](README.md#installation-and-updates).
 - `bundle.resources` includes the upstream Ghostty, Restty, ghostty-web, and xterm.js license notices under `licenses/terminal/`. Repository documentation and test-only reference WASM cores are not packaged; the frontend includes only the adapted SIMD and scalar cores.
 
 ### Known gotchas

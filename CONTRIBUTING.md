@@ -1,12 +1,12 @@
 # Contributing to Terax
 
-Terax is a solo-maintained project with a strong product direction. Contributions are welcome, but **alignment matters more than volume**.
+This Terax version is an AI-agent-free fork of [crynta/terax-ai](https://github.com/crynta/terax-ai), focused on a terminal, folder explorer, and Git tracking. Contributions belong in [slaatarsi/terax-no-ai](https://github.com/slaatarsi/terax-no-ai). **Alignment matters more than volume**.
 
 This document helps you decide *whether* and *how* to contribute in a way that's likely to get merged, so neither of us wastes time.
 
 ## How this project is run
 
-- Terax has one active maintainer ([@crynta](https://github.com/crynta)).
+- This fork is maintained separately from Crynta's upstream project.
 - Review bandwidth is limited.
 - Not every contribution can be accepted, even if it's technically correct. Alignment with project direction matters as much as code quality.
 - For scope and direction, see [ROADMAP.md](ROADMAP.md). Read it before opening anything non-trivial.
@@ -26,9 +26,7 @@ For the architecture and how to contribute safely, see [TERAX.md](TERAX.md) and 
 
 ## Where to discuss
 
-Discord: [Crynta OS](https://discord.gg/tyveTUyEp7)
-
-Use Discord for design discussion, scope questions, "should I work on X?", quick feedback. Use GitHub Issues for tracking concrete bugs and features.
+Use this fork's [GitHub Issues](https://github.com/slaatarsi/terax-no-ai/issues) for bugs, scope questions, and design discussion. Upstream's Discord is not this fork's support channel.
 
 ## What makes a good contribution
 
@@ -36,7 +34,7 @@ These get merged fast:
 
 - **Bug fixes** with clear reproduction steps.
 - **Docs / typos / small UX fixes** - open a PR directly.
-- **Pre-discussed features** - alignment in an issue or Discord first.
+- **Pre-discussed features** - alignment in a fork issue first.
 - **Small, focused changes** - easy to review, low risk.
 
 If your change is small and obvious (typo, narrow bugfix, small docs change), open a PR directly. No issue required.
@@ -66,7 +64,7 @@ For anything beyond a small fix, **discussion is required before opening a PR**.
 - Performance rewrites
 - Architectural changes
 - Anything touching many files or systems
-- New AI providers
+Built-in AI providers and agent integrations are out of scope.
 
 Pull requests with significant unsolicited changes will be closed without detailed review. This isn't meant to discourage contribution. It ensures alignment before significant work goes in.
 
@@ -82,12 +80,12 @@ Terax positions itself as **lightweight, fast, production-grade**. Every PR is r
 - `cargo clippy --all-targets --locked -- -D warnings` clean
 - `cargo nextest run --locked` clean (or `cargo test --locked`)
 - `cargo fmt` applied before pushing
-- No perf regressions in known hot paths: terminal renderer, PTY stream, AI streaming, source control, file explorer
+- No perf regressions in known hot paths: terminal renderer, PTY stream, source control, file explorer
 - No new heavy dependencies (>50KB gzip in client bundle, >5MB compiled on Rust side) without justification
 - Platform parity preserved (macOS / Linux / Windows / WSL still work)
-- Security review for changes to AI tool surface, file system access, network paths, IPC commands
+- Security review for changes to file system access, network paths, IPC commands
 
-If you're not sure how to measure perf or what counts as a hot path, ask in Discord or an issue. Better to confirm than get bounced.
+If you're not sure how to measure perf or what counts as a hot path, ask in a fork issue. Better to confirm than get bounced.
 
 ## Changes to core subsystems require a test
 
@@ -96,13 +94,13 @@ The most common way a PR breaks Terax is a **local fix with global blast radius*
 So if your change touches behavior in any of these load-bearing paths, the PR must add or extend a test that locks the invariant you're relying on:
 
 - **Shell/terminal spawn**: what shell launches, with which cwd, env, and login flags. A "fix" here can stop terminals from starting entirely.
-- **Workspace authorization**: which directories spawns, git, and AI tools may operate in. Both the allow and the deny side.
+- **Workspace authorization**: which directories shell spawns, Git, and filesystem commands may operate in. Both the allow and the deny side.
 - **Git command layer**: repo-root resolution, pathspec/argument guards, status parsing.
 - **Filesystem mutation**: atomic writes, symlink handling, no-data-loss on partial failure.
-- **IPC command surface and AI tool surface**: anything the webview or the agent can invoke.
+- **IPC command surface**: anything the webview or local control client can invoke.
 - **Pure logic with wide reach**: cwd inheritance, tab/split tree transforms, OSC/prompt parsing, the command guard.
 
-The bar for the test is real coverage of the contract, not a placeholder. Test the case that would actually break: the edge, the deny path, the "what happens one level above home". If you can't see how to test it, ask in Discord before opening the PR. That conversation is usually shorter than the revert.
+The bar for the test is real coverage of the contract, not a placeholder. Test the case that would actually break: the edge, the deny path, the "what happens one level above home". If you can't see how to test it, ask in a fork issue before opening the PR. That conversation is usually shorter than the revert.
 
 UI rendering, themes, syntax-highlight tables, and anything the type-checker already guarantees do not need tests.
 
@@ -110,7 +108,7 @@ UI rendering, themes, syntax-highlight tables, and anything the type-checker alr
 
 To set expectations:
 
-- Terax is terminal-first, not an IDE clone. Focused capabilities such as LSP, AI autocomplete, formatting, source control, and previews belong when they stay fast, lazy, and resource-bounded.
+- Terax is terminal-first, not an IDE clone. Retained capabilities such as optional LSP, formatting, source control, and previews belong when they stay fast, lazy, and resource-bounded.
 - Not building: Jupyter-style workspaces, integrated debugger and profiler suites, package manager UIs, a full web browser, unbounded background indexing, or an IDE-scale extension host.
 - This is not a curated "first open-source contribution" project. Beginners are welcome but expect normal review.
 - Mechanical refactors, broad style changes, drive-by rewrites are not helpful.
@@ -141,12 +139,12 @@ The **PR title becomes the squash commit** for most PRs. Multi-commit PRs with w
 feat(terminal): add split panes
 fix(explorer): prevent input from disappearing on create
 chore(deps): bump tauri to 2.x
-security(ai): tighten path guard
+security(fs): tighten path guard
 ```
 
 Types: `feat`, `fix`, `chore`, `docs`, `perf`, `refactor`, `test`, `build`, `ci`, `security`.
 
-Common scopes: `terminal`, `editor`, `explorer`, `pty`, `ai`, `agents`, `settings`, `tabs`, `shortcuts`, `ui`, `git`, `preview`, `windows`, `linux`, `macos`, `wsl`.
+Common scopes: `terminal`, `editor`, `explorer`, `pty`, `settings`, `tabs`, `shortcuts`, `ui`, `git`, `preview`, `windows`, `linux`, `macos`, `wsl`.
 
 Within a PR, individual commit messages can be free-form (they get squashed or grouped).
 
@@ -227,7 +225,7 @@ src/                        React frontend
 A: No, open a PR directly.
 
 **Q: I have an idea for a new feature.**
-A: Open a GitHub issue or bring it to Discord. Don't open a PR without prior discussion.
+A: Open an issue in this fork. Don't open a PR without prior discussion.
 
 **Q: My PR was closed without detailed feedback.**
 A: Usually means it didn't align with project direction, or scope was too large to review responsibly. This is normal for a solo project. Reopen is welcome if you want to take another pass at a smaller scope.
@@ -239,7 +237,7 @@ A: Comment first to confirm it's still relevant and nobody else is on it. For an
 A: Focus on your stated goal. Submit cleanup as a separate PR after discussion if it matters.
 
 **Q: How long does review take?**
-A: Depends. Small bug fix or docs: usually within a few days. Larger feature: maybe a week or two. Pre-discussed work moves faster.
+A: Review time depends on maintainer availability. This fork does not promise a turnaround time.
 
 **Q: Does this version include AI providers or agent integrations?**
 A: No. External CLIs can still be run manually in a terminal.

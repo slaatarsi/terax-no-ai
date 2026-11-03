@@ -1,8 +1,18 @@
 # Terax contributor documentation
 
+This documentation describes the AI-agent-free [slaatarsi/terax-no-ai](https://github.com/slaatarsi/terax-no-ai) fork of [crynta/terax-ai](https://github.com/crynta/terax-ai). Its focus is a terminal, folder explorer, and Git tracking. Built-in AI chat, agents, providers, and AI autocomplete are not part of this version.
+
 This directory holds long-form contributor and maintainer guides. `TERAX.md` at the repo root is the living architecture doc and the source of truth; these guides elaborate on specific areas without duplicating it.
 
 If a guide conflicts with `TERAX.md`, `TERAX.md` wins.
+
+## Fork and upstream boundaries
+
+- [README](../README.md) - product scope, source build, attribution, and upstream updater warning.
+- [Fork direction](../ROADMAP.md) - priorities and excluded AI features.
+- [Security](../SECURITY.md) - private reporting and inherited update/application identities.
+- Translated summaries are in [readme/](readme/README.fr.md); the root README carries the full build and distribution instructions.
+- Upstream releases, websites, signing sponsorship, and support channels are not fork distribution or support guarantees. The updater still targets upstream; do not accept those updates if you want to retain the fork.
 
 ## Getting started
 
@@ -27,7 +37,7 @@ If a guide conflicts with `TERAX.md`, `TERAX.md` wins.
 - [Review dispositions, 2026-09-07](architecture/ghostty-review-2026-09-07.md) - reviewed findings, decisions, and supporting checks.
 - [Original WebGPU migration design](architecture/ghostty-webgpu-migration.md) - historical design and staged implementation record.
 
-Dated reports and their raw JSON data preserve evidence for specific revisions;
+Dated reports and their raw JSON data preserve evidence for specific revisions, including upstream-era workloads named after agents. These workload names and historical measurements do not describe built-in agent functionality in this fork;
 they do not replace the current architecture or establish full release readiness.
 These contributor documents and test-only reference WASM cores stay in the
 repository and are not included in the application bundle.

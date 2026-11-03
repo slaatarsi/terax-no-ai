@@ -27,7 +27,7 @@ IDs start at 1 and monotonically increase; they are never reused so the frontend
 
 `session::spawn_with` starts three small-stack threads per session:
 
-1. **Reader** - reads bytes from the PTY master, runs the DA filter and agent detector (both `memchr`-driven), and pushes filtered bytes into the session's `OutputQueue`. It checks an atomic `closed` flag, not the queue mutex.
+1. **Reader** - reads bytes from the PTY master, runs the `memchr`-driven DA filter, and pushes filtered bytes into the session's `OutputQueue`. It checks an atomic `closed` flag, not the queue mutex.
 2. **Writer** - owns the PTY input. `pty_write` and terminal replies (DA/CPR) share one bounded queue, so input stays ordered and no task is spawned per keystroke.
 3. **Waiter** - waits for the child process to exit, joins the reader, hands the exit status to the hub, and waits until the exit frame was delivered.
 
@@ -115,9 +115,9 @@ On macOS and Linux, `Drop for Session` calls `killer.kill()`. Dev `Ctrl-C` of `c
 
 PowerShell / PSReadLine sends a cursor-position query (`ESC[6n`) at startup and blocks until it gets an answer. The `DaFilter` (`da_filter.rs`) intercepts that query and replies on the PTY input so the shell does not hang.
 
-### Agent detection
+### No agent integration
 
-The reader thread runs an `AgentDetector` (`agent_detect.rs`) over the byte stream. It is armed by `OSC 133;C;<cmd>` or by a self-armed `OSC 777` marker and emits `terax:agent-signal` transitions (`started`, `working`, `attention`, `finished`, `exited`). Detection is driven only by OSC sequences, never by raw output, so a repainting TUI never flaps.
+Agent detection, `terax:agent-signal` events, and automatic agent-hook installation were removed in this fork. OSC 7 and OSC 133 remain ordinary shell integration for working directories and command blocks. Programs launched manually are not managed as agents.
 
 ### Enter key
 

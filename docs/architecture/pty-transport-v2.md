@@ -143,8 +143,9 @@ terminals.
 
 ## Other per-chunk costs removed
 
-- `agent_detect` and `da_filter` scan with `memchr` and copy runs with
-  `extend_from_slice` instead of per-byte pushes.
+- `da_filter` scans with `memchr` and copies runs with
+  `extend_from_slice` instead of per-byte pushes. Agent detection was removed
+  in this fork; there is no `agent_detect` hot path.
 - The reader checks `closed` with an atomic flag instead of locking the queue
   mutex twice per read.
 - `pty_write` no longer uses `spawn_blocking` per keystroke. Each session has a

@@ -1,46 +1,34 @@
 # Security
 
-Terax runs shells, reads/writes files, and talks to AI providers, so security bugs matter. If you find one, please tell us before posting it publicly.
+This AI-agent-free Terax fork runs shells and accesses local files and Git repositories. It is forked from [crynta/terax-ai](https://github.com/crynta/terax-ai); fork-specific reports belong to [slaatarsi/terax-no-ai](https://github.com/slaatarsi/terax-no-ai), not upstream's security email.
 
 ## Reporting
 
-Email **security@terax.app**. Include:
+Use this fork's [private vulnerability reporting page](https://github.com/slaatarsi/terax-no-ai/security/advisories/new) if private reporting is enabled. If it is unavailable, ask the fork maintainer for a private contact method without disclosing vulnerability details publicly. Do not include tokens, private files, or exploit details in a public issue.
 
-- What the issue is and what it lets an attacker do
-- Steps to reproduce (a small PoC is great)
-- Version, OS, arch
+Include the affected commit, OS and architecture, impact, and minimal reproduction steps. No response-time or supported-release guarantee is established for this fork. Retest against the latest fork revision when possible.
 
-We'll get back to you within a few days. Once it's fixed, we'll credit you in the release notes - unless you'd rather stay anonymous.
+## Scope
 
-Please **don't** open a public GitHub issue for security reports.
+- Rust backend: PTY lifecycle, filesystem access, Git commands, workspace authorization, IPC, and plugins.
+- Frontend handling of untrusted terminal output, file content, links, and preview navigation.
+- Authenticated local CLI control and Windows Explorer integration.
+- Packaging, release provenance, and updater configuration.
 
-## Supported versions
+Report dependency vulnerabilities to their maintainers as well. Terax cannot protect against an already-compromised host or commands deliberately run with your permissions.
 
-Until `1.0.0`, only the latest minor gets security fixes. See the current version in `package.json` or on the [Releases page](https://github.com/crynta/terax-ai/releases). 
+## Security boundaries
 
-## What's in scope
+- The webview reaches host operations through allow-listed Tauri APIs; it has no Node runtime.
+- Workspace authorization, path validation, bounded transport, and terminal escape-sequence handling remain security-critical.
+- A terminal command runs with your user permissions. Review commands before running them.
+- No built-in AI providers, agent tools, API-key management, or agent approval system remain. Manually launched CLI tools have their own network and credential behavior.
+- Earlier AI conversations, provider settings, credentials, and external hooks are not loaded or automatically removed. Review old installations separately if cleanup is required.
 
-- The Rust backend in `src-tauri/` (PTY, FS, IPC, plugins)
-- The frontend in `src/` - anywhere untrusted input lands (terminal output, file content, AI tool results, credentials)
-- Release artifacts on GitHub and `terax.app`
-- The auto-updater
+## Updates and distribution
 
-## What's not
+The updater still targets upstream `crynta/terax-ai` releases with the upstream verification key. A valid upstream signature does not establish that an update is this AI-free fork. Accepting it may replace the fork with upstream. Do not accept upstream updates if you intend to retain this version.
 
-- Bugs in upstream deps (Tauri, xterm.js, CodeMirror, AI SDKs…) - report those upstream. We'll ship the fix once it's released.
-- Anything that needs an already-compromised machine or a local attacker with shell access
-- Older versions (`< 0.5`)
+Application and installer identities are also inherited. Do not assume fork and upstream installations are isolated. Fork-specific signing, update infrastructure, and packaged-install validation must be established before making independent release assurances.
 
-## What we do to keep things safe
-
-- **API keys** live in the OS keychain via `keyring` - not on disk, not in `localStorage`, not in logs.
-- **No telemetry.** Terax only talks to the network when you ask it to (AI requests, update checks, web preview).
-- **AI tool approval.** File writes and shell commands from the agent need your OK before they run.
-- **No Node in the renderer.** The frontend only reaches the host through the allow-listed Tauri commands.
-- **Signed releases.** Updates are verified before they're applied.
-
-## What we can't promise
-
-- Terax runs whatever you (or the agent) tell it to run, with your permissions. That's kind of the point of a terminal.
-- AI providers see whatever you send them. Read their retention policies.
-- Local LLM endpoints (LM Studio, OpenAI-compatible) are trusted at the network level - only point Terax at servers you control.
+See the [security model](docs/architecture/security-model.md), [release gates](docs/architecture/ghostty-release-readiness.md), and [Windows Explorer guide](docs/architecture/windows-explorer.md).

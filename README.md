@@ -1,168 +1,80 @@
 <div align="center">
   <img src="public/logo.png" width="144" height="144" alt="Terax" />
   <h1>Terax</h1>
-
-  <p><strong>Lightweight terminal-first development workspace.</strong></p>
-  <p>
-    <a href="https://terax.app">Website</a>
-    ·
-    <a href="https://terax.app/docs">Docs</a>
-    ·
-    <a href="https://github.com/crynta/Terax-website">Website's source code</a>
-  </p>
-
-  <p>
-    <img src="https://img.shields.io/github/v/release/crynta/terax-ai?label=version&color=blue" alt="version" />
-    <img src="https://img.shields.io/github/downloads/crynta/terax-ai/total?label=downloads&color=blue" alt="downloads" />
-    <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey" alt="platform" />
-    <a href="https://discord.gg/tyveTUyEp7"><img src="https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white" alt="Discord" /></a>
-    <a href="https://www.youtube.com/@crynta"><img src="https://img.shields.io/badge/Youtube-FF0000?logo=youtube&logoColor=white" alt="YouTube" /></a>
-  </p>
+  <p><strong>A lightweight terminal with a folder explorer and Git tracking. No built-in AI agents.</strong></p>
+  <p><a href="https://github.com/slaatarsi/terax-no-ai">Fork repository</a> · <a href="docs/README.md">Documentation</a> · <a href="https://github.com/crynta/terax-ai">Original project</a></p>
 </div>
 
-<p align="center">
-  <a href="docs/readme/README.zh-CN.md">简体中文</a> |
-  <a href="docs/readme/README.es.md">Español</a> |
-  <a href="docs/readme/README.de.md">Deutsch</a> |
-  <a href="docs/readme/README.fr.md">Français</a> |
-  <a href="docs/readme/README.ja.md">日本語</a> |
-  <a href="docs/readme/README.ko.md">한국어</a> |
-  <a href="docs/readme/README.pt-BR.md">Português</a> |
-  <a href="docs/readme/README.pl.md">Polski</a> |
-  <a href="docs/readme/README.ru.md">Русский</a> |
-  <a href="docs/readme/README.id.md">Bahasa Indonesia</a> |
-  <a href="docs/readme/README.hi.md">हिन्दी</a>
-</p>
+[简体中文](docs/readme/README.zh-CN.md) | [Español](docs/readme/README.es.md) | [Deutsch](docs/readme/README.de.md) | [Français](docs/readme/README.fr.md) | [日本語](docs/readme/README.ja.md) | [한국어](docs/readme/README.ko.md) | [Português](docs/readme/README.pt-BR.md) | [Polski](docs/readme/README.pl.md) | [Русский](docs/readme/README.ru.md) | [Bahasa Indonesia](docs/readme/README.id.md) | [हिन्दी](docs/readme/README.hi.md)
 
----
+## About this fork
 
-Terax is a lightweight open-source terminal-first development workspace built on Tauri 2 + Rust and React 19. It includes a native PTY backend, Ghostty terminal model with WebGPU and WebGL rendering, code editor, file explorer, source control with a Git graph, and web previews. No telemetry. No account.
+This version of **Terax** is forked from [crynta/terax-ai](https://github.com/crynta/terax-ai) and modified to remove built-in AI and agent integrations. Credit for the original project goes to Crynta and the upstream contributors. This fork is maintained separately; upstream websites, releases, and community channels do not represent this version.
 
-Built-in AI and agent integrations have been removed. You can still run any CLI manually in a terminal. Existing conversations, saved provider settings, credentials, and external agent configurations are not erased or loaded by this version. Previously installed external hooks are not automatically uninstalled. Translated READMEs may describe the earlier AI-enabled version.
+The focus is simple: **a terminal, a folder explorer, and Git tracking**. There is no built-in AI chat, agent orchestration, provider configuration, AI autocomplete, or voice input. Ordinary CLI programs can still be run manually in the terminal.
 
-> [!NOTE]
-> Over the past few months, most of my development time went into building [Zephium](https://zephium.app), a new browser-native work environment rebuilt for humans and agents.
->
-> Terax is now returning to active development. A major **v0.9.0** update is already in progress, with some substantial architectural changes, including moving from **xterm.js to libghostty + WebGPU**.
->
-> More updates soon.
-
-## Screenshots
-
-<table>
-  <tr>
-    <td align="center"><img src="docs/web-preview.png" alt="Web preview" /><br/><sub>Web preview of local dev servers</sub></td>
-    <td align="center"><img src="docs/editor.png" alt="Code editor" /><br/><sub>Code editor with language server support</sub></td>
-  </tr>
-  <tr>
-    <td align="center"><img src="docs/themes.png" alt="Themes and background image" style="margin-top: 12px;"/><br/><sub>Custom themes, presets, and background images</sub></td>
-    <td align="center"><img src="docs/source-control.png" alt="Source control and git graph" style="margin-top: 12px;"/><br/><sub>Source control panel with git graph in history</sub></td>
-  </tr>
-  <tr>
-    <td colspan="2" align="center"><img src="docs/terminal.png" alt="Terminal" style="border-radius: 4px; margin-top: 12px;" /><br/><sub>Block-based WebGL terminal with editor-like input panel</sub></td>
-  </tr>
-</table>
+Existing conversations, saved provider settings, credentials, and external agent configurations from earlier installations are not loaded or deleted. Previously installed external hooks are not automatically uninstalled.
 
 ## Features
 
-### Terminal
+- **Terminal:** tabs, horizontal and vertical splits, native shells, search, links, true color, block-based command input, and restored workspace layouts.
+- **Folder explorer:** browse folders, search files, rename and manage files, and see live filesystem changes and Git decorations.
+- **Git tracking:** working-tree status, diffs, stage/unstage, commits, push, branch display, and history with a commit graph.
+- **Retained utilities:** code editing with optional language-server support, Markdown and media viewing, local web previews, themes, and background customization. These are supporting features, not AI integrations.
+- **Platforms:** macOS, Linux, Windows, and WSL workspace support. Platform and installer validation limits are documented in the [release-readiness guide](docs/architecture/ghostty-release-readiness.md).
 
-- libghostty-vt with WebGPU rendering and a WebGL fallback, multi-tab with background streaming
-- GPU-accelerated block-based terminal with editor-like command input
-- Native PTY backend via `portable-pty` (zsh, bash, pwsh, fish, cmd)
-- Split panels (horizontal and vertical)
-- Inline search, link detection, true-color
-- Drag files from the explorer or desktop into a terminal as shell-safe quoted paths
-- Per-tab workspace environments on Windows (Local, or any installed WSL distro)
-- Spaces restore tabs, working directories, and split layouts across launches
+Built with Tauri 2, Rust, `portable-pty`, libghostty-vt WASM, React 19, and TypeScript. WebGPU is the default terminal renderer, with a WebGL fallback. No telemetry or Terax account is required.
 
-### Code editor
+## Screenshots
 
-- CodeMirror 6 (supports all popular languages - TS/JS, Rust, Python, Go, C/C++, Java, HTML/CSS, JSON, Markdown, etc.)
-- Opt-in language server support with diagnostics, navigation, completion, formatting, and custom servers
-- Rendered Markdown plus image, video, audio, and PDF viewing
-- Vim mode
-- Built-in editor themes including Kanagawa, Catppuccin, Rosé Pine, Everforest, Dracula, Solarized, Nord, Tokyo Night, GitHub, and Xcode
+Screenshots are inherited from upstream and may not exactly match this fork's current UI.
 
-### Source control
+![Terminal](docs/terminal.png)
+![Folder explorer and source control](docs/source-control.png)
 
-- Stage / unstage hunks, commit (Cmd+Enter / Ctrl+Enter), push with upstream awareness
-- Branch display including detached HEAD state
-- Git history pane with a real commit graph (lane rendering for merges and branches)
-- Commit search and filter, click through to the remote commit page
+## Installation and updates
 
-### File explorer
+Build this fork from source using the instructions below. Do not use upstream installers, `terax-bin`, or the upstream Nix package expecting this AI-free version. No fork-specific signed installer or release availability is guaranteed here.
 
-- Catppuccin icon theme
-- Fuzzy search, keyboard navigation, inline rename, context actions
-- Live updates when files change on disk
+> **Update warning:** the current updater configuration still points to `crynta/terax-ai` releases and uses the upstream verification key. Accepting an upstream update may replace this fork with the upstream version. Do not accept those updates if you want to keep this AI-free fork. This documentation update does not change updater configuration, application identity, or signing.
 
-### Web preview
-
-- Auto-detects local dev servers and opens them in a preview tab
-- External URL preview via a native child webview
-
-### Themes and customization
-
-- Custom themes built in-app, switch between bundled presets and your own
-- Create your own themes, share them or import from the community
-- Background images with adjustable opacity and blur
-- Editor theme is independent from the app theme
-
-## Install
-
-Latest installers are on the [Releases](https://github.com/crynta/terax-ai/releases/latest) page. Terax auto-updates from there.
-
-### Windows notes
-
-- Default shell detection: `pwsh.exe` (PowerShell 7+) -> `powershell.exe` (Windows PowerShell 5.1) -> `cmd.exe`.
-- WSL is a first-class workspace environment, not a wrapped subprocess.
-
-### Linux notes
-
-- **Arch / AUR:** `yay -S terax-bin` (or `paru`, etc.). Tracks the latest release.
-- **NixOS / Nix**: use the official flake - `nix profile install github:crynta/terax-ai` (non-NixOS), or import the flake and add `inputs.terax.packages.${pkgs.system}.terax` to `environment.systemPackages` (NixOS). The `nixosModules.terax` output is also available for a simpler setup.
-- **AppImage:** needs FUSE. Without it: `./Terax_*.AppImage --appimage-extract-and-run`. On Wayland with rendering glitches, try `WEBKIT_DISABLE_DMABUF_RENDERER=1`. Otherwise the `.deb` / `.rpm` packages link against the system GTK stack and tend to be smoother.
+Windows shell detection uses `pwsh.exe`, then `powershell.exe`, then `cmd.exe`. Windows Explorer integration is implemented, but signed-install acceptance remains pending; see [Windows Explorer integration](docs/architecture/windows-explorer.md).
 
 ## Build from source
 
-**Prerequisites**
-- Rust (stable), https://rustup.rs
-- Node 22+ and [pnpm](https://pnpm.io)
-- Tauri prerequisites for your platform, https://tauri.app/start/prerequisites/
+Prerequisites: Rust stable, Node 22+, [pnpm](https://pnpm.io), and the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for your platform. Windows shell-extension build requirements are in the [integration guide](docs/architecture/windows-explorer.md).
 
-**Run**
 ```bash
+git clone https://github.com/slaatarsi/terax-no-ai.git
+cd terax-no-ai
 pnpm install
-pnpm tauri dev          # development
-pnpm tauri build        # production bundle
+pnpm tauri dev
+# Production bundle:
+pnpm tauri build
 ```
 
-**Checks**
+## Checks
+
 ```bash
 pnpm lint
 pnpm check-types
 pnpm test
-cd src-tauri && cargo clippy --all-targets --locked -- -D warnings   # Rust lint (matches CI)
-cd src-tauri && cargo nextest run --locked                           # or: cargo test --locked
+cd src-tauri
+cargo clippy --all-targets --locked -- -D warnings
+cargo nextest run --locked
+# Without nextest: cargo test --locked
 ```
 
-## Tech stack
+## Documentation and contributions
 
-Tauri 2, Rust, `portable-pty`, libghostty-vt WASM, React 19, TypeScript, Vite, CodeMirror 6, Tailwind v4, shadcn/ui, Zustand.
+- [Contributor documentation](docs/README.md)
+- [Architecture source of truth](TERAX.md)
+- [Contributing](CONTRIBUTING.md)
+- [Fork direction](ROADMAP.md)
+- [Security](SECURITY.md)
 
-## Contributing
+Report fork-specific issues and submit pull requests in [slaatarsi/terax-no-ai](https://github.com/slaatarsi/terax-no-ai), not the upstream project.
 
-Issues and PRs are welcome! Feel free to open issues, suggest features, or submit pull requests. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [architecture docs](docs/README.md) for more details.
+## License and attribution
 
-## Code signing
-
-<a href="https://signpath.org"><img src="https://avatars.githubusercontent.com/u/34448643?s=200&v=4" width="80" alt="SignPath" align="left" /></a>
-
-Windows builds are signed with a free code signing certificate provided by [SignPath.io](https://signpath.io), certificate by the [SignPath Foundation](https://signpath.org).
-
-<br clear="left" />
-
-## License
-
-Terax is licensed under the Apache-2.0 License. For more information on our dependencies, see [Apache License 2.0](LICENSE).
+[Apache-2.0](LICENSE). This fork retains the original project's license and third-party notices. See [crynta/terax-ai](https://github.com/crynta/terax-ai) for the original project. Upstream signing sponsorship and release assurances do not automatically apply to fork builds.

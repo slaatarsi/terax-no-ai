@@ -14,7 +14,7 @@ This applies to everything inside the project: issues, PRs, discussions, commits
 
 ## Enforcement
 
-If you see a violation - or experience one - email **crynta.dev@gmail.com** with subject `[Terax conduct]`. Include links and context.
+Report violations to the maintainers of [this fork](https://github.com/slaatarsi/terax-no-ai) using GitHub's reporting tools or an available private maintainer contact. Include links and context without posting private information publicly. Upstream's maintainers and email addresses are not this fork's moderation contacts.
 
 Maintainers may, at their discretion:
 

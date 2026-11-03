@@ -1,5 +1,10 @@
 # App lab: resource benchmark of the real application
 
+This AI-agent-free fork retains synthetic terminal workloads with names such as
+`agent-sim` and `agents-steady`. They test ordinary CLI/TUI output, not built-in
+agents or orchestration. Historical measurements below are evidence for the
+measured revisions, not new validation of this fork.
+
 `scripts/app-lab` measures the **real** Terax app (full React shell, real PTYs, real
 tabs and splits, real window, the release profile users run) instead of the synthetic
 renderer in `scripts/renderer-profile`. It exists because the renderer lab did not reproduce
