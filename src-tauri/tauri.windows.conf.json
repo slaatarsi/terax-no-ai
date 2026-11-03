@@ -1,9 +1,14 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "bundle": {
+    "resources": {
+      "windows-shell/generated/payload/": "shell-extension/"
+    },
     "windows": {
       "wix": {
-        "version": "0.9.0"
+        "version": "0.9.0",
+        "fragmentPaths": ["windows-shell/installer.wxs"],
+        "componentRefs": ["TeraxShellRegistration"]
       }
     }
   },

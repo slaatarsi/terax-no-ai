@@ -9,11 +9,6 @@ export type BenchAppApi = {
   setActiveId: (id: number) => void;
   newTab: (cwd?: string) => number;
   newBlockTab: (cwd?: string) => number;
-  newAgentGroupTab: (
-    cwd: string | undefined,
-    title: string,
-    instances: 1 | 2 | 3 | 4,
-  ) => { tabId: number; leafIds: number[] };
   splitActivePane: (tabId: number, dir: "row" | "col") => number | null;
   closeTab: (id: number) => void;
   readBuffer: (leafId: number, maxLines?: number) => string | null;

@@ -151,7 +151,7 @@ fn apply_common(
 ) {
     cmd.env("TERM", "xterm-256color");
     cmd.env("COLORTERM", "truecolor");
-    cmd.env("TERAX_TERMINAL", "1");
+    cmd.env_remove("TERAX_TERMINAL");
     if blocks {
         cmd.env("TERAX_BLOCKS", "1");
     }
@@ -191,9 +191,9 @@ fn apply_common(
     }
     ensure_utf8_locale(cmd);
 
+    // A caller-validated cwd must fail at spawn if deleted, never silently open elsewhere.
     let resolved_cwd = cwd
         .map(PathBuf::from)
-        .filter(|p| p.is_dir())
         .or_else(|| workspace::launch_cwd_snapshot().filter(|p| p.is_dir()))
         .or_else(|| dirs::home_dir().filter(|p| p.is_dir()));
     if let Some(cwd) = resolved_cwd {
@@ -662,7 +662,7 @@ mod windows {
         }
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
-        cmd.env("TERAX_TERMINAL", "1");
+        cmd.env_remove("TERAX_TERMINAL");
         super::ensure_utf8_locale(&mut cmd);
         log::info!("spawning WSL shell: {distro} ({shell_path})");
         Ok(cmd)
@@ -1118,6 +1118,16 @@ mod tests {
     fn empty_or_missing_override_is_none() {
         assert_eq!(sanitize_shell_override(Some("   ".into())), None);
         assert_eq!(sanitize_shell_override(None), None);
+    }
+
+    #[test]
+    fn an_explicit_deleted_directory_never_falls_back_to_home() {
+        let temp = tempfile::tempdir().unwrap();
+        let cwd = temp.path().join("deleted");
+        let path = cwd.to_string_lossy().into_owned();
+        let mut command = CommandBuilder::new("shell");
+        apply_common(&mut command, Some(path), false, None);
+        assert_eq!(command.get_cwd().map(std::path::PathBuf::from), Some(cwd));
     }
 
     #[test]

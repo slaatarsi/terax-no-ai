@@ -7,6 +7,9 @@ use std::process::ExitCode;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+#[cfg(windows)]
+mod directory;
+
 use serde_json::{json, Value};
 use terax_control_protocol::{
     CallerContext, ControlDescriptor, ControlRequest, ControlResponse, OpenParams,
@@ -26,7 +29,12 @@ static REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
 enum Action {
     Help,
     Version,
-    Request { method: &'static str, params: Value },
+    Request {
+        method: &'static str,
+        params: Value,
+    },
+    #[cfg(windows)]
+    OpenDirectory(PathBuf),
 }
 
 #[derive(Debug, PartialEq)]
@@ -69,6 +77,10 @@ fn main() -> ExitCode {
             } else {
                 eprintln!("terax: {}", error.message);
             }
+            #[cfg(windows)]
+            if env::args_os().nth(1).as_deref() == Some(std::ffi::OsStr::new("open-directory")) {
+                directory::show_error(&error.message);
+            }
             ExitCode::from(error.exit)
         }
     }
@@ -85,6 +97,8 @@ fn run(args: Vec<OsString>) -> Result<(), CliError> {
             println!("terax {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
+        #[cfg(windows)]
+        Action::OpenDirectory(path) => directory::open(&path),
         Action::Request { method, params } => {
             let endpoint = load_endpoint()?;
             let caller = env::var("TERAX_PANE_ID")
@@ -133,6 +147,8 @@ fn parse_args(mut args: Vec<OsString>) -> Result<Config, CliError> {
         Some("capabilities") => request_without_params(args, METHOD_CAPABILITIES)?,
         Some("identify") => request_without_params(args, METHOD_IDENTIFY)?,
         Some("open") => parse_open(args)?,
+        #[cfg(windows)]
+        Some("open-directory") => directory::parse(args)?,
         Some("--") => {
             args.insert(0, command);
             parse_open(args)?
@@ -683,8 +699,7 @@ mod tests {
 
     #[test]
     fn loopback_parsing_rejects_hostnames_and_remote_hosts() {
-        let error =
-            parse_loopback_address("localhost:4312").expect_err("reject hostname");
+        let error = parse_loopback_address("localhost:4312").expect_err("reject hostname");
         assert_eq!(error.code, "invalid_endpoint");
         let error = parse_loopback_address("127.0.0.1").expect_err("reject missing port");
         assert_eq!(error.code, "invalid_endpoint");

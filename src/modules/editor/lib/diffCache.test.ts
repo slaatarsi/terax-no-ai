@@ -5,7 +5,7 @@ const nativeMock = vi.hoisted(() => ({
   gitCommitFileDiff: vi.fn(),
 }));
 
-vi.mock("@/modules/ai/lib/native", () => ({ native: nativeMock }));
+vi.mock("@/lib/native", () => ({ native: nativeMock }));
 
 const workspaceMock = vi.hoisted(() => ({
   currentWorkspaceScopeKey: vi.fn(() => "scope"),
@@ -13,7 +13,7 @@ const workspaceMock = vi.hoisted(() => ({
 
 vi.mock("@/modules/workspace", () => workspaceMock);
 
-import type { GitDiffContentResult } from "@/modules/ai/lib/native";
+import type { GitDiffContentResult } from "@/lib/native";
 
 function result(modifiedContent: string): GitDiffContentResult {
   return {
@@ -88,8 +88,12 @@ describe("git diff content cache", () => {
     }
     await mod.fetchWorkingDiff("/repo", "new.ts", "-", null);
 
-    expect(mod.getCachedDiff(mod.workingDiffKey("/repo", "f0.ts", "-"))).toBeUndefined();
-    expect(mod.getCachedDiff(mod.workingDiffKey("/repo", "f1.ts", "-"))).toBeDefined();
+    expect(
+      mod.getCachedDiff(mod.workingDiffKey("/repo", "f0.ts", "-")),
+    ).toBeUndefined();
+    expect(
+      mod.getCachedDiff(mod.workingDiffKey("/repo", "f1.ts", "-")),
+    ).toBeDefined();
   });
 
   it("keeps an entry that was just read when the limit overflows", async () => {
@@ -106,7 +110,9 @@ describe("git diff content cache", () => {
     await fetchWorkingDiff("/repo", "new.ts", "-", null);
 
     expect(getCachedDiff(workingDiffKey("/repo", "f0.ts", "-"))).toBeDefined();
-    expect(getCachedDiff(workingDiffKey("/repo", "f1.ts", "-"))).toBeUndefined();
+    expect(
+      getCachedDiff(workingDiffKey("/repo", "f1.ts", "-")),
+    ).toBeUndefined();
   });
 
   it("does not retry or cache a failed backend call", async () => {
@@ -140,7 +146,9 @@ describe("git diff content cache", () => {
     const { invalidateRepoDiffs } = mod;
     invalidateRepoDiffs("/repo-a");
 
-    expect(getCachedDiff(workingDiffKey("/repo-a", "x.ts", "-"))).toBeUndefined();
+    expect(
+      getCachedDiff(workingDiffKey("/repo-a", "x.ts", "-")),
+    ).toBeUndefined();
 
     workspaceMock.currentWorkspaceScopeKey.mockReturnValue("other");
     expect(getCachedDiff(workingDiffKey("/repo-a", "x.ts", "-"))).toBeDefined();

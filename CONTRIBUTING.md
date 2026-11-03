@@ -187,26 +187,22 @@ src-tauri/                  Rust backend
   src/
     lib.rs                  Tauri command registration
     modules/
-      agent.rs              Terminal coding-agent hook installer/status
       fs/                   File system commands (read/write/search/grep)
       git/                  Source control commands
       history/              Shell history integration
       mod.rs                Module exports
-      net.rs                AI HTTP proxy with SSRF guard
       proc.rs               Process utilities
       pty/                  Terminal sessions, shell integration, DA filter
-      secrets.rs            OS keychain access
-      shell/                Oneshot/session/background shell commands
+      shell/                Bounded one-shot formatter commands
       workspace.rs          WSL bridge, workspace env, authorization registry
 
 src/                        React frontend
-  App.tsx                   Top-level coordinator
-  components/               shadcn/ui + AI Elements
+  app/App.tsx               Top-level coordinator
+  lib/native.ts             Shared Git and workspace IPC
+  components/               shadcn/ui primitives
   modules/
-    agents/                 Agent notifications and management
-    ai/                     Agents, sessions, tools, providers, composer
     command-palette/        Modal command palette and actions
-    editor/                 CodeMirror stack, AI autocomplete
+    editor/                 CodeMirror stack and LSP integration
     explorer/               File tree
     git-history/            Git graph and history pane
     header/                 Top bar, search, window controls
@@ -219,7 +215,7 @@ src/                        React frontend
     spaces/                 Workspace spaces/projects with per-space tab persistence
     statusbar/              Bottom bar and cwd breadcrumb
     tabs/                   Tab/split model
-    terminal/               xterm.js sessions, OSC handlers, renderer pool
+    terminal/               Ghostty sessions, OSC handlers, GPU/WebGL rendering
     theme/                  Custom theme engine and presets
     updater/                Auto-updater UI
     workspace/              Workspace environment switching
@@ -245,8 +241,8 @@ A: Focus on your stated goal. Submit cleanup as a separate PR after discussion i
 **Q: How long does review take?**
 A: Depends. Small bug fix or docs: usually within a few days. Larger feature: maybe a week or two. Pre-discussed work moves faster.
 
-**Q: Why did my PR for a new AI provider get closed?**
-A: Most provider requests are now covered by the `openai-compatible` provider (point it at any OpenAI-compatible base URL) or OpenRouter. New built-in providers must justify unique value beyond what those cover.
+**Q: Does this version include AI providers or agent integrations?**
+A: No. External CLIs can still be run manually in a terminal.
 
 **Q: My PR conflicts after main moved. Should I rebase?**
 A: If the change is still relevant and reasonably small, yes. If it's a large stale PR, expect it to be closed with an offer to reopen after rebase. Rotting velocity is real, not personal.

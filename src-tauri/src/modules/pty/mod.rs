@@ -1,4 +1,3 @@
-mod agent_detect;
 mod da_filter;
 mod foreground;
 mod gate;
@@ -150,6 +149,7 @@ pub async fn pty_open(
     cols: u16,
     rows: u16,
     cwd: Option<String>,
+    require_cwd: Option<bool>,
     workspace: Option<WorkspaceEnv>,
     blocks: Option<bool>,
     shell: Option<String>,
@@ -172,11 +172,22 @@ pub async fn pty_open(
     let session = tauri::async_runtime::spawn_blocking(move || {
         // Authorizing the directory canonicalizes it, which touches the disk
         // (a network volume, or wsl.exe for a WSL workspace): never on a worker.
-        let cwd = user_spawn_cwd_or_home(
-            &app.state::<WorkspaceRegistry>(),
-            cwd.as_deref(),
-            &workspace,
-        );
+        let cwd = if require_cwd.unwrap_or(false) {
+            crate::modules::workspace::authorize_user_spawn_cwd(
+                &app.state::<WorkspaceRegistry>(),
+                cwd.as_deref(),
+                &workspace,
+            )?
+            .ok_or("an explicit working directory is required")?;
+            // Spawn in the path as given (like the ordinary branch): the canonical form is `\\?\` on Windows.
+            cwd.map(|cwd| cwd.trim().to_owned())
+        } else {
+            user_spawn_cwd_or_home(
+                &app.state::<WorkspaceRegistry>(),
+                cwd.as_deref(),
+                &workspace,
+            )
+        };
         session::spawn(
             id,
             app,

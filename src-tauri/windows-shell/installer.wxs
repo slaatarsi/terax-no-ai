@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+ <Fragment>
+  <DirectoryRef Id="INSTALLDIR">
+   <Component Id="TeraxShellRegistration" Guid="2D0B0951-7747-4D42-AD7C-E18436560749" Win64="yes">
+    <RegistryValue Root="HKCU" Key="Software\Crynta\Terax\Installer" Name="ShellIntegration" Type="string" Value="[INSTALLDIR]" KeyPath="yes" />
+    <!-- Keep a usable fallback even if policy prevents PowerShell from starting. -->
+    <RegistryKey Root="HKCU" Key="Software\Classes\Directory\shell\OpenInTerax">
+     <RegistryValue Type="string" Value="Open in Terax" />
+     <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLDIR]terax.exe&quot;,0" />
+     <RegistryValue Name="NoWorkingDirectory" Type="string" Value="" />
+     <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[INSTALLDIR]terax.exe&quot; --open-directory &quot;%V&quot;" /></RegistryKey>
+    </RegistryKey>
+    <RegistryKey Root="HKCU" Key="Software\Classes\Directory\Background\shell\OpenInTerax">
+     <RegistryValue Type="string" Value="Open in Terax" />
+     <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLDIR]terax.exe&quot;,0" />
+     <RegistryValue Name="NoWorkingDirectory" Type="string" Value="" />
+     <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[INSTALLDIR]terax.exe&quot; --open-directory &quot;%V&quot;" /></RegistryKey>
+    </RegistryKey>
+    <RegistryKey Root="HKCU" Key="Software\Classes\Drive\shell\OpenInTerax">
+     <RegistryValue Type="string" Value="Open in Terax" />
+     <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLDIR]terax.exe&quot;,0" />
+     <RegistryValue Name="NoWorkingDirectory" Type="string" Value="" />
+     <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[INSTALLDIR]terax.exe&quot; --open-directory &quot;%V&quot;" /></RegistryKey>
+    </RegistryKey>
+   </Component>
+  </DirectoryRef>
+  <Property Id="TERAX_SHELL_OWNER" Secure="yes">
+   <RegistrySearch Id="TeraxShellOwnerSearch" Root="HKCU" Key="Software\Crynta\Terax\Explorer" Name="InstallDir" Type="raw" Win64="yes" />
+  </Property>
+  <!-- Commit only after MSI succeeds. Registration remains per-user, never SYSTEM. -->
+  <CustomAction Id="TeraxRegisterShell" Directory="INSTALLDIR" Execute="commit" Impersonate="yes" Return="ignore"
+   ExeCommand="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File &quot;[INSTALLDIR]shell-extension\install.ps1&quot; -Action Install -InstallDir &quot;[INSTALLDIR].&quot;" />
+  <CustomAction Id="TeraxUnregisterShell" Directory="INSTALLDIR" Execute="deferred" Impersonate="yes" Return="check"
+   ExeCommand="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File &quot;[INSTALLDIR]shell-extension\install.ps1&quot; -Action Uninstall -InstallDir &quot;[INSTALLDIR].&quot;" />
+  <CustomAction Id="TeraxRestoreShell" Directory="INSTALLDIR" Execute="rollback" Impersonate="yes" Return="ignore"
+   ExeCommand="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File &quot;[INSTALLDIR]shell-extension\install.ps1&quot; -Action Install -InstallDir &quot;[INSTALLDIR].&quot;" />
+  <InstallExecuteSequence>
+   <Custom Action="TeraxRegisterShell" After="InstallFiles">NOT REMOVE</Custom>
+   <Custom Action="TeraxRestoreShell" Before="TeraxUnregisterShell">REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE AND TERAX_SHELL_OWNER</Custom>
+   <Custom Action="TeraxUnregisterShell" Before="RemoveFiles">REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE AND TERAX_SHELL_OWNER</Custom>
+  </InstallExecuteSequence>
+ </Fragment>
+</Wix>

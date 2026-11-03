@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "pnpm build:cli:dev && pnpm dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build:cli && pnpm build",
+    "beforeBuildCommand": "pnpm build:cli && pnpm build:windows-shell && pnpm build",
     "frontendDist": "../dist",
     "removeUnusedCommands": true
   },
@@ -93,8 +93,8 @@
       }
     },
     "category": "DeveloperTool",
-    "shortDescription": "AI-native terminal emulator",
-    "longDescription": "Terax — an open-source AI-native terminal emulator with multi-tab, file explorer, code editor, web preview, voice input, and AI agents.",
+    "shortDescription": "Terminal emulator with file explorer and Git",
+    "longDescription": "Terax: an open-source terminal emulator with tabs, split panes, command blocks, file explorer, code editor, web preview, and Git integration.",
     "fileAssociations": [
       {
         "name": "Terax Document",

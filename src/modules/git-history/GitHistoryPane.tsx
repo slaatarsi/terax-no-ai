@@ -11,7 +11,7 @@ import {
   native,
   type GitCommitFileChange,
   type GitLogEntry,
-} from "@/modules/ai/lib/native";
+} from "@/lib/native";
 import { FileIcon } from "@/modules/explorer/FileIcon";
 import {
   Copy01Icon,

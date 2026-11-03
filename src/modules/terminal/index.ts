@@ -1,8 +1,4 @@
 export {
-  subscribeAgentSignals,
-  useAgentActivityStore,
-} from "./lib/agentActivity";
-export {
   findLeafCwd,
   hasLeaf,
   leafIds,

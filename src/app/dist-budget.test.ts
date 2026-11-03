@@ -197,13 +197,7 @@ describe("built startup graph", () => {
         ...analyzeDist(outDir, [html])[html].trace.files.keys(),
       ]),
     );
-    for (const stem of [
-      "ai-sdk-shared",
-      "ai-anthropic",
-      "streamdown",
-      "codemirror",
-      "iconEngine",
-    ]) {
+    for (const stem of ["streamdown", "codemirror", "iconEngine"]) {
       const file = chunks.find((f) => chunkName(f) === stem);
       expect(file, `${stem} chunk should be emitted`).toBeDefined();
       expect(startup.has(`assets/${file}`), `${stem} must not be startup`).toBe(
@@ -216,6 +210,25 @@ describe("built startup graph", () => {
         true,
       );
     }
+  });
+
+  it("ships no built-in AI SDK or agent modules", () => {
+    const assets = join(outDir, "assets");
+    const sources = readdirSync(assets)
+      .filter((file) => file.endsWith(".js.map"))
+      .flatMap((file) => {
+        const map = JSON.parse(readFileSync(join(assets, file), "utf8")) as {
+          sources: string[];
+        };
+        return map.sources;
+      });
+    expect(
+      sources.filter((source) =>
+        /node_modules\/(?:@ai-sdk\/|ai\/)|src\/modules\/(?:ai|agents)\//.test(
+          source,
+        ),
+      ),
+    ).toEqual([]);
   });
 
   it("bundles one shared Lezer highlighter for parsers and themes", () => {

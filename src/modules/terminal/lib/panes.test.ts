@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   firstLeafSlotId,
   leafIds,
+  setLeafCwd,
   swapLeafInDirection,
   type PaneNode,
 } from "@/modules/terminal/lib/panes";
@@ -23,6 +24,25 @@ function col(...ids: number[]): PaneNode {
     children: ids.map((id) => ({ kind: "leaf", id })),
   };
 }
+
+describe("explicit directory startup", () => {
+  it("marks a restored leaf as strict even when its cwd has not changed", () => {
+    const leaf: PaneNode = { kind: "leaf", id: 1, cwd: "D:/project" };
+    const tree: PaneNode = {
+      kind: "split",
+      id: 10,
+      dir: "row",
+      children: [leaf],
+    };
+    expect(setLeafCwd(tree, 1, "D:/project")).toBe(tree);
+    const strict = setLeafCwd(tree, 1, "D:/project", true);
+    expect(strict).toMatchObject({ children: [{ requireCwd: true }] });
+    expect(setLeafCwd(strict, 1, "D:/changed")).toMatchObject({
+      children: [{ cwd: "D:/changed", requireCwd: true }],
+    });
+    expect(setLeafCwd(strict, 1, "D:/project", true)).toBe(strict);
+  });
+});
 
 describe("swapLeafInDirection", () => {
   it("swaps the active pane with its neighbor to the left", () => {

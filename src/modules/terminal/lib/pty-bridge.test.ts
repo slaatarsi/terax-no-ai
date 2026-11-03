@@ -11,25 +11,12 @@ type Request = {
 
 const mocks = vi.hoisted(() => ({
   invoke: vi.fn(),
-  signal: null as
-    | null
-    | ((event: {
-        payload: { id: number; kind: string; agent?: string };
-      }) => void),
-  listen: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: mocks.invoke,
   convertFileSrc: (path: string, protocol: string) =>
     `${protocol}://localhost/${path}`,
-}));
-
-vi.mock("@tauri-apps/api/event", () => ({
-  listen: mocks.listen.mockImplementation((_name, callback) => {
-    mocks.signal = callback;
-    return Promise.resolve(() => {});
-  }),
 }));
 
 vi.mock("@/modules/workspace", () => ({
@@ -39,15 +26,12 @@ vi.mock("@/modules/workspace", () => ({
 // The bridge owns a process-wide hub, so every test gets a fresh module graph.
 async function load() {
   vi.resetModules();
-  const [bridge, activity, presentation] = await Promise.all([
+  const [bridge, presentation] = await Promise.all([
     import("./pty-bridge"),
-    import("./agentActivity"),
     import("./ptyPresentation"),
   ]);
   return {
     openPty: bridge.openPty,
-    tabAgentStatus: activity.tabAgentStatus,
-    useAgentActivityStore: activity.useAgentActivityStore,
     setLeafPresentation: presentation.setLeafPresentation,
   };
 }
@@ -116,52 +100,37 @@ describe("PTY bridge over the multiplexed stream", () => {
     vi.unstubAllGlobals();
   });
 
-  it("subscribes before spawning and updates agent icons through exit and close", async () => {
-    const { openPty, tabAgentStatus, useAgentActivityStore } = await load();
-    let subscribed!: () => void;
-    mocks.listen.mockImplementationOnce((_name, callback) => {
-      mocks.signal = callback;
-      return new Promise<() => void>((resolve) => {
-        subscribed = () => resolve(() => {});
-      });
+  it("preserves strict working-directory requests from Explorer", async () => {
+    const { openPty } = await load();
+    nativeInvoke();
+    const session = await openPty(
+      80,
+      24,
+      { onData: vi.fn() },
+      "C:/مشروع & spaces",
+      false,
+      undefined,
+      7,
+      true,
+    );
+    expect(openArguments()).toMatchObject({
+      cwd: "C:/مشروع & spaces",
+      requireCwd: true,
+      paneId: 7,
     });
-    let nextId = 50;
-    mocks.invoke.mockImplementation((command: string) => {
-      if (command === "pty_stream_open")
-        return Promise.resolve("00000000000000aa");
-      if (command === "pty_open") {
-        expect(mocks.signal).not.toBeNull();
-        return Promise.resolve(nextId++);
-      }
-      return Promise.resolve();
-    });
-    const openingFirst = openPty(80, 24, { onData: vi.fn() });
-    const openingSecond = openPty(80, 24, { onData: vi.fn() });
-    await flush();
-    expect(mocks.invoke).not.toHaveBeenCalled();
-    subscribed();
-    const [first, second] = await Promise.all([openingFirst, openingSecond]);
-    expect(mocks.listen).toHaveBeenCalledTimes(1);
-    const status = (id: number) => {
-      const { phases, agents } = useAgentActivityStore.getState();
-      return tabAgentStatus(phases, agents, [id]);
-    };
-    for (const [id, agent] of [
-      [first.id, "claude"],
-      [second.id, "codex"],
-    ] as const) {
-      mocks.signal?.({ payload: { id, kind: "started", agent } });
-      expect(status(id)).toEqual({ state: "working", agent });
-    }
-    mocks.signal?.({ payload: { id: first.id, kind: "attention" } });
-    useAgentActivityStore.getState().acknowledgeAttention([first.id]);
-    expect(status(first.id)).toEqual({ state: "idle", agent: "claude" });
-    mocks.signal?.({ payload: { id: first.id, kind: "exited" } });
-    expect(status(first.id)).toEqual({ state: null, agent: null });
-    mocks.signal?.({ payload: { id: second.id, kind: "finished" } });
-    await second.close();
-    expect(status(second.id)).toEqual({ state: null, agent: null });
+    await session.close();
+  });
+
+  it("opens concurrent terminals without an agent listener", async () => {
+    const { openPty } = await load();
+    nativeInvoke(50);
+    const [first, second] = await Promise.all([
+      openPty(80, 24, { onData: vi.fn() }),
+      openPty(80, 24, { onData: vi.fn() }),
+    ]);
+    expect(first.id).not.toBe(second.id);
     await first.close();
+    await second.close();
     await flush();
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -255,18 +224,15 @@ describe("PTY bridge over the multiplexed stream", () => {
     await session.close();
   });
 
-  it("delivers the exit, clears agent activity, and releases the stream entry", async () => {
-    const { openPty, useAgentActivityStore } = await load();
+  it("delivers the exit and releases the stream entry", async () => {
+    const { openPty } = await load();
     nativeInvoke(60);
     const onExit = vi.fn();
     const session = await openPty(80, 24, { onData: vi.fn(), onExit });
-    mocks.signal?.({ payload: { id: 60, kind: "started", agent: "codex" } });
     await flush();
     heldPoll().reply([{ kind: "exit", id: session.id, code: 0 }]);
     await flush();
     expect(onExit).toHaveBeenCalledWith(0);
-    expect(useAgentActivityStore.getState().agents[60]).toBeUndefined();
-    expect(useAgentActivityStore.getState().phases[60]).toBeUndefined();
     // The last terminal is gone: the held poll is released, nothing else runs.
     expect(polls().filter((poll) => !poll.signal?.aborted)).toHaveLength(1);
     await session.close();

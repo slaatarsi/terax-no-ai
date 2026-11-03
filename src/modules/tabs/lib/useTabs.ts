@@ -1,9 +1,5 @@
 import { isMarkdownPath } from "@/lib/utils";
 import {
-  type AgentInstanceCount,
-  createAgentPanePlan,
-} from "@/modules/agents/lib/launcher";
-import {
   findLeafCwd,
   hasLeaf,
   leafIds,
@@ -44,7 +40,7 @@ export type TerminalTab = TabBase & {
   paneTree: PaneNode;
   activeLeafId: number;
   blocks?: boolean;
-  /** AI agent cannot read buffer / context of this terminal. */
+  /** Excluded from workspace restoration. */
   private?: boolean;
   /** User-set label that overrides the cwd-derived name. Survives cd. */
   customTitle?: string;
@@ -77,22 +73,6 @@ export type MarkdownTab = TabBase & {
   kind: "markdown";
   title: string;
   path: string;
-};
-
-export type AiDiffStatus = "pending" | "approved" | "rejected";
-
-export type AiDiffTab = TabBase & {
-  id: number;
-  kind: "ai-diff";
-  title: string;
-  path: string;
-  /** "" for newly created files. */
-  originalContent: string;
-  proposedContent: string;
-  /** Tool-call approval id used to resolve the AI SDK approval. */
-  approvalId: string;
-  status: AiDiffStatus;
-  isNewFile: boolean;
 };
 
 export type GitDiffTab = TabBase & {
@@ -130,7 +110,6 @@ export type Tab =
   | EditorTab
   | PreviewTab
   | MarkdownTab
-  | AiDiffTab
   | GitDiffTab
   | GitHistoryTab
   | GitCommitFileDiffTab;
@@ -728,7 +707,7 @@ export function useTabs(initial?: Partial<TerminalTab>) {
     [],
   );
 
-  const newTab = useCallback((cwd?: string) => {
+  const newTab = useCallback((cwd?: string, requireCwd = false) => {
     const tabId = nextIdRef.current++;
     const leafId = nextIdRef.current++;
     setTabs((t) => [
@@ -739,7 +718,12 @@ export function useTabs(initial?: Partial<TerminalTab>) {
         spaceId: activeSpaceIdRef.current,
         title: "shell",
         cwd,
-        paneTree: { kind: "leaf", id: leafId, cwd },
+        paneTree: {
+          kind: "leaf",
+          id: leafId,
+          cwd,
+          ...(requireCwd ? { requireCwd } : {}),
+        },
         activeLeafId: leafId,
       },
     ]);
@@ -774,41 +758,6 @@ export function useTabs(initial?: Partial<TerminalTab>) {
     ).__teraxNewBlockTab = newBlockTab;
   }, [newBlockTab]);
 
-  const newAgentGroupTab = useCallback(
-    (cwd: string | undefined, title: string, instances: AgentInstanceCount) => {
-      const tabId = nextIdRef.current++;
-      const { paneTree, leafIds: agentLeafIds } = createAgentPanePlan(
-        instances,
-        () => nextIdRef.current++,
-        cwd,
-      );
-      setTabs((t) => [
-        ...t,
-        {
-          id: tabId,
-          kind: "terminal",
-          spaceId: activeSpaceIdRef.current,
-          title,
-          customTitle: title,
-          cwd,
-          paneTree,
-          activeLeafId: agentLeafIds[0],
-        },
-      ]);
-      setActiveId(tabId);
-      return { tabId, leafIds: agentLeafIds };
-    },
-    [],
-  );
-
-  const newAgentTab = useCallback(
-    (cwd: string | undefined, title: string) => {
-      const { tabId, leafIds: agentLeafIds } = newAgentGroupTab(cwd, title, 1);
-      return { tabId, leafId: agentLeafIds[0] };
-    },
-    [newAgentGroupTab],
-  );
-
   const newPrivateTab = useCallback((cwd?: string) => {
     const tabId = nextIdRef.current++;
     const leafId = nextIdRef.current++;
@@ -834,7 +783,7 @@ export function useTabs(initial?: Partial<TerminalTab>) {
    *
    * - `pin = true` (default) — opens or activates a **persistent** tab.
    *   If the path is currently in the preview slot it is promoted in-place.
-   *   Use this for programmatic opens (AI diff, New File dialog, etc.).
+   *   Use this for programmatic opens (New File dialog, CLI requests, etc.).
    * - `pin = false` — VSCode-style **preview** tab. A single shared slot is
    *   reused: if a persistent tab for the path already exists it is activated;
    *   otherwise the current preview slot is replaced with the new path.
@@ -872,81 +821,6 @@ export function useTabs(initial?: Partial<TerminalTab>) {
         return t;
       }),
     );
-  }, []);
-
-  const openAiDiffTab = useCallback(
-    (input: {
-      path: string;
-      originalContent: string;
-      proposedContent: string;
-      approvalId: string;
-      isNewFile: boolean;
-    }) => {
-      let targetId: number | null = null;
-      setTabs((curr) => {
-        const existing = curr.find(
-          (t) => t.kind === "ai-diff" && t.approvalId === input.approvalId,
-        );
-        if (existing) {
-          targetId = existing.id;
-          return curr;
-        }
-        const id = nextIdRef.current++;
-        targetId = id;
-        const title = `${basename(input.path)} (AI diff)`;
-        return [
-          ...curr,
-          {
-            id,
-            kind: "ai-diff",
-            spaceId: activeSpaceIdRef.current,
-            title,
-            path: input.path,
-            originalContent: input.originalContent,
-            proposedContent: input.proposedContent,
-            approvalId: input.approvalId,
-            status: "pending",
-            isNewFile: input.isNewFile,
-          },
-        ];
-      });
-      if (targetId !== null) setActiveId(targetId);
-      return targetId as number | null;
-    },
-    [],
-  );
-
-  const setAiDiffStatus = useCallback(
-    (approvalId: string, status: AiDiffStatus) => {
-      setTabs((curr) =>
-        curr.map((t) =>
-          t.kind === "ai-diff" && t.approvalId === approvalId
-            ? { ...t, status }
-            : t,
-        ),
-      );
-    },
-    [],
-  );
-
-  const closeAiDiffTab = useCallback((approvalId: string) => {
-    setTabs((curr) => {
-      const target = curr.find(
-        (t) => t.kind === "ai-diff" && t.approvalId === approvalId,
-      );
-      if (!target) return curr;
-      const fallback = nextActiveInSpace(curr, target.id);
-      if (fallback === null) {
-        return curr.map((t) =>
-          t.kind === "ai-diff" && t.approvalId === approvalId
-            ? { ...t, status: "approved" as AiDiffStatus }
-            : t,
-        );
-      }
-      const next = curr.filter((t) => t.id !== target.id);
-      setActiveId((active) => (target.id === active ? fallback : active));
-      return next;
-    });
   }, []);
 
   const newPreviewTab = useCallback((url: string) => {
@@ -1224,21 +1098,29 @@ export function useTabs(initial?: Partial<TerminalTab>) {
    * re-emits OSC 7 on every prompt, including empty Enters, so this fires at
    * keystroke rate. Always-setTabs there cascades a paneTree re-render across
    * every open tab. */
-  const setLeafCwd = useCallback((leafId: number, cwd: string) => {
-    setTabs((curr) => {
-      let changed = false;
-      const next = curr.map((t) => {
-        if (t.kind !== "terminal" || !hasLeaf(t.paneTree, leafId)) return t;
-        const paneTree = setLeafCwdInTree(t.paneTree, leafId, cwd);
-        const isActive = t.activeLeafId === leafId;
-        const cwdChanged = isActive && t.cwd !== cwd;
-        if (paneTree === t.paneTree && !cwdChanged) return t;
-        changed = true;
-        return { ...t, paneTree, ...(cwdChanged && { cwd }) };
+  const setLeafCwd = useCallback(
+    (leafId: number, cwd: string, requireCwd?: boolean) => {
+      setTabs((curr) => {
+        let changed = false;
+        const next = curr.map((t) => {
+          if (t.kind !== "terminal" || !hasLeaf(t.paneTree, leafId)) return t;
+          const paneTree = setLeafCwdInTree(
+            t.paneTree,
+            leafId,
+            cwd,
+            requireCwd,
+          );
+          const isActive = t.activeLeafId === leafId;
+          const cwdChanged = isActive && t.cwd !== cwd;
+          if (paneTree === t.paneTree && !cwdChanged) return t;
+          changed = true;
+          return { ...t, paneTree, ...(cwdChanged && { cwd }) };
+        });
+        return changed ? next : curr;
       });
-      return changed ? next : curr;
-    });
-  }, []);
+    },
+    [],
+  );
 
   const focusPane = useCallback((tabId: number, leafId: number) => {
     setTabs((curr) =>
@@ -1421,20 +1303,15 @@ export function useTabs(initial?: Partial<TerminalTab>) {
     setOverrideLanguage,
     newTab,
     newBlockTab,
-    newAgentTab,
-    newAgentGroupTab,
     newPrivateTab,
     openFileTab,
     pinTab,
     newPreviewTab,
     newMarkdownTab,
     setMarkdownView,
-    openAiDiffTab,
     openGitDiffTab,
     openCommitHistoryTab,
     openCommitFileDiffTab,
-    setAiDiffStatus,
-    closeAiDiffTab,
     closeTab,
     closeTabs,
     updateTab,

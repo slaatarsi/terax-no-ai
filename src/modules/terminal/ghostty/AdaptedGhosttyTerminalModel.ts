@@ -1,7 +1,3 @@
-import {
-  detectTerminalLinks,
-  type TerminalTextLink,
-} from "@/modules/terminal/ghostty/core/terminalLinks";
 import type {
   PackedTerminalViewport,
   TerminalCursor,
@@ -10,6 +6,10 @@ import type {
   TerminalModes,
   TerminalRowRange,
 } from "@/modules/terminal/backend/contracts";
+import {
+  detectTerminalLinks,
+  type TerminalTextLink,
+} from "@/modules/terminal/ghostty/core/terminalLinks";
 import type {
   TeraxGhostty,
   TeraxGhosttyGpuRenderState,
@@ -24,12 +24,12 @@ import type {
 } from "@terax/ghostty-core/protocol";
 import { CellFlags } from "@terax/ghostty-core/protocol";
 import { PromptPresentationGate } from "./core/PromptPresentationGate";
-import { ResizePromptHold } from "./core/ResizePromptHold";
 import {
   CELL_STRIDE,
   type Rgb,
   type TerminalCellReader,
 } from "./core/packedCells";
+import { ResizePromptHold } from "./core/ResizePromptHold";
 import { SynchronizedOutputPresentationGate } from "./core/SynchronizedOutputPresentationGate";
 import {
   MIN_SCROLLBACK_BYTES,
@@ -52,6 +52,10 @@ import type {
 
 const MAX_DIMENSION = 4_096;
 const MAX_CELLS = 1_048_576;
+// X10, normal, button-event, any-event tracking plus the SGR/urxvt encodings.
+const MOUSE_TRACKING_RESET = new TextEncoder().encode(
+  "\x1b[?9l\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1015l",
+);
 const NO_DAMAGE: TerminalDamage = { kind: "none" };
 const FULL_DAMAGE: TerminalDamage = { kind: "full" };
 const NO_GLYPHS: readonly GhosttyGpuGlyph[] = Object.freeze([]);
@@ -313,7 +317,11 @@ export class AdaptedGhosttyTerminalModel implements GhosttyTerminalModelApi {
     this.damageNeedsResolution = true;
     this.refreshModes();
     this.drainReplies();
-    this.drainEvents();
+    if (this.drainEvents() && this.modesValue.mouseTracking) {
+      // A killed TUI never sent its DECRST, so the wheel would keep going to a shell that ignores it.
+      this.terminal.write(MOUSE_TRACKING_RESET);
+      this.refreshModes();
+    }
     this.synchronizedOutputPresentation.observe(
       this.modesValue.synchronizedOutput,
     );
@@ -1040,13 +1048,18 @@ export class AdaptedGhosttyTerminalModel implements GhosttyTerminalModelApi {
     if (bytes.byteLength > 0) this.replySink(bytes);
   }
 
-  private drainEvents(): void {
+  /** Returns whether the chunk left the shell at a fresh prompt. */
+  private drainEvents(): boolean {
     const events = this.terminal.drainEvents();
+    let atPrompt = false;
     for (const event of events) {
+      if (event.type === "prompt-start") atPrompt = true;
+      else if (event.type === "end-of-input") atPrompt = false;
       this.promptPresentation.observe(event);
       this.resizePromptHold.observe(event);
       this.eventSink?.(event);
     }
+    return atPrompt;
   }
 
   private requestPresentation(): void {

@@ -2,9 +2,7 @@ pub mod modules;
 
 #[cfg(target_os = "macos")]
 use modules::app_menu;
-use modules::{
-    agent, control, fs, git, history, lsp, net, pty, secrets, shell, vibrancy, workspace,
-};
+use modules::{control, fs, git, history, lsp, pty, shell, vibrancy, workspace};
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
@@ -28,6 +26,81 @@ fn get_launch_dir(state: State<'_, LaunchDir>) -> Option<String> {
 #[tauri::command]
 fn get_launch_files(state: State<'_, LaunchFiles>) -> Vec<String> {
     std::mem::take(&mut *state.0.lock().expect("LaunchFiles mutex poisoned"))
+}
+
+struct DirectoryLaunchRequest(Option<String>);
+
+#[tauri::command]
+fn get_launch_directory_request(state: State<'_, DirectoryLaunchRequest>) -> Option<String> {
+    state.0.clone()
+}
+
+#[cfg(windows)]
+fn directory_launch_request(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<Option<String>, String> {
+    if args.next().as_deref() != Some(std::ffi::OsStr::new("--open-directory")) {
+        return Ok(None);
+    }
+    let path = args.next().ok_or("missing directory launch target")?;
+    if args.next().is_some() {
+        return Err("expected exactly one directory launch target".into());
+    }
+    let path = path
+        .to_str()
+        .ok_or("directory contains unsupported Unicode")?;
+    control::normalize_directory_target(path)
+        .map(|path| Some(fs::to_canon(path)))
+        .map_err(|(_, error)| error)
+}
+
+#[cfg(windows)]
+fn delegate_directory_open(path: &str) {
+    use std::os::windows::process::CommandExt;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{AllowSetForegroundWindow, ASFW_ANY};
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let helper = std::env::current_exe()
+        .ok()
+        .and_then(|exe| Some(exe.parent()?.join("terax-cli.exe")));
+    let Some(helper) = helper.filter(|helper| helper.is_file()) else {
+        eprintln!("Terax CLI helper is missing; reinstall Terax");
+        return;
+    };
+    // Pass Explorer's foreground permission on so the reused window can come forward.
+    unsafe { AllowSetForegroundWindow(ASFW_ANY) };
+    if let Err(error) = std::process::Command::new(helper)
+        .args(["open-directory", "--", path])
+        .creation_flags(CREATE_NO_WINDOW)
+        .spawn()
+    {
+        eprintln!("Could not start the Terax directory helper: {error}");
+    }
+}
+
+#[cfg(all(test, windows))]
+mod directory_launch_tests {
+    use super::*;
+    #[test]
+    fn explicit_directory_launch_never_substitutes_home() {
+        let temp = tempfile::tempdir().unwrap();
+        let args = vec![
+            "--open-directory".into(),
+            temp.path().as_os_str().to_owned(),
+        ];
+        assert!(directory_launch_request(args.into_iter())
+            .unwrap()
+            .is_some());
+        assert!(directory_launch_request(
+            vec![
+                "--open-directory".into(),
+                temp.path().join("deleted").into_os_string()
+            ]
+            .into_iter()
+        )
+        .is_err());
+        assert!(directory_launch_request(vec!["--open-directory".into()].into_iter()).is_err());
+        assert_eq!(directory_launch_request(std::iter::empty()).unwrap(), None);
+    }
 }
 
 enum LaunchEntry {
@@ -164,23 +237,29 @@ async fn open_settings_window(app: tauri::AppHandle, tab: Option<String>) -> Res
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    #[cfg(windows)]
-    {
-        let args: Vec<String> = std::env::args().collect();
-        if args.get(1).map(String::as_str) == Some("__terax_notify") {
-            if let (Some(agent), Some(event)) = (args.get(2), args.get(3)) {
-                agent::emit_conout_marker(agent, event);
-            }
-            use std::io::Write;
-            let mut out = std::io::stdout();
-            let _ = out.write_all(b"{}");
-            let _ = out.flush();
-            std::process::exit(0);
-        }
-    }
-
     modules::runtime::install();
 
+    #[cfg(windows)]
+    let directory_request = match directory_launch_request(std::env::args_os().skip(1)) {
+        Ok(path) => path,
+        Err(error) => {
+            eprintln!("Invalid directory launch: {error}");
+            return;
+        }
+    };
+    #[cfg(windows)]
+    if let Some(path) = &directory_request {
+        // Legacy shell verbs launch the GUI directly. Delegate to the helper so a running
+        // instance is reused and saved workspaces cannot override the requested folder.
+        if std::env::var_os("TERAX_DIRECTORY_HELPER").is_none() {
+            delegate_directory_open(path);
+            return;
+        }
+        // Not inherited by terminals spawned from this process.
+        std::env::remove_var("TERAX_DIRECTORY_HELPER");
+    }
+    #[cfg(not(windows))]
+    let directory_request = None;
     let launch = parse_launch_target();
     let cli_dir = launch.dir.clone();
     workspace::init_launch_cwd(cli_dir.as_deref());
@@ -207,7 +286,6 @@ pub fn run() {
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_notification::init())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(tauri_plugin_log::log::LevelFilter::Info)
@@ -218,9 +296,6 @@ pub fn run() {
         .register_asynchronous_uri_scheme_protocol("terax-pty", pty::stream_protocol)
         .on_page_load(|webview, payload| {
             if matches!(payload.event(), tauri::webview::PageLoadEvent::Started) {
-                if let Some(state) = webview.try_state::<net::AiStreamState>() {
-                    state.cancel_window(webview.window().label());
-                }
                 if let Some(state) = webview.try_state::<pty::PtyState>() {
                     state.reset_webview(webview.label());
                 }
@@ -249,12 +324,8 @@ pub fn run() {
             Ok(())
         })
         .manage(pty::PtyState::default())
-        .manage(net::AiStreamState::default())
-        .manage(modules::ai_sessions::SessionFilesState::default())
         .manage(modules::window_presentation::WindowPresentationState::default())
         .manage(control_state)
-        .manage(shell::ShellState::default())
-        .manage(secrets::SecretsState::default())
         .manage(fs::watch::FsWatchState::default())
         .manage(history::HistoryState::default())
         .manage(lsp::LspState::default())
@@ -268,6 +339,7 @@ pub fn run() {
             }
             registry
         })
+        .manage(DirectoryLaunchRequest(directory_request))
         .manage(LaunchDir(Mutex::new(cli_dir)))
         .manage(LaunchFiles(Mutex::new(launch.files)))
         .invoke_handler(tauri::generate_handler![
@@ -330,13 +402,6 @@ pub fn run() {
             git::commands::git_list_branches,
             git::commands::git_checkout_branch,
             shell::shell_run_command,
-            shell::shell_session_open,
-            shell::shell_session_run,
-            shell::shell_session_close,
-            shell::shell_bg_spawn,
-            shell::shell_bg_logs,
-            shell::shell_bg_kill,
-            shell::shell_bg_list,
             workspace::wsl_list_distros,
             workspace::wsl_default_distro,
             workspace::ipc::wsl_home,
@@ -346,22 +411,8 @@ pub fn run() {
             control::control_respond,
             get_launch_dir,
             get_launch_files,
+            get_launch_directory_request,
             open_settings_window,
-            agent::agent_enable_hooks,
-            agent::agent_hooks_status,
-            secrets::secrets_get,
-            secrets::secrets_set,
-            secrets::secrets_delete,
-            secrets::secrets_get_all,
-            net::lm_ping,
-            net::ai_http_stream,
-            net::ai_http_cancel,
-            net::ai_http_ack,
-            modules::ai_sessions::ai_session_load,
-            modules::ai_sessions::ai_session_save,
-            modules::ai_sessions::ai_session_delete,
-            modules::ai_sessions::ai_session_finish_migration,
-            modules::ai_sessions::ai_session_prune_backup,
             history::history_suggest,
             history::history_commands,
             history::history_record,
@@ -385,9 +436,6 @@ pub fn run() {
                     event: tauri::WindowEvent::Destroyed,
                     ..
                 } => {
-                    if let Some(state) = app.try_state::<net::AiStreamState>() {
-                        state.cancel_window(&label);
-                    }
                     if let Some(state) = app.try_state::<pty::PtyState>() {
                         state.destroy_webview(&label);
                     }

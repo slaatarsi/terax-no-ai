@@ -145,6 +145,14 @@ jobs:
         with:
           tool: cargo-nextest
 
+      - name: Build and test Explorer COM and sparse manifest
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          & ./src-tauri/windows-shell/build.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Explorer native/package tests failed' }
+          & ./src-tauri/windows-shell/install.test.ps1
+
       - name: cargo check
         working-directory: src-tauri
         run: cargo check --all-targets --locked

@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -9,31 +8,26 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import {
-  type OsNotificationResult,
-  testAgentOsNotification,
-} from "@/modules/agents/lib/notify";
 import { usePreferencesStore } from "@/modules/settings/preferences";
 import type { ThemePref } from "@/modules/settings/store";
 import {
-  setAgentNotificationSound,
-  setAgentNotifications,
   setAutostart,
   setConfirmCloseRunningTerminal,
   setDefaultWorkspaceEnv,
   setExplorerGitDecorations,
   setRestoreWindowState,
   setShowHidden,
+  setSidebarSide,
   setTerminalCursorBlink,
   setTerminalCursorStyle,
   setTerminalFontFamily,
   setTerminalFontSize,
   setTerminalFontWeight,
   setTerminalLetterSpacing,
-  setTerminalScrollback,
-  setTerminalShell,
   setTerminalRenderer,
   setTerminalScreenReader,
+  setTerminalScrollback,
+  setTerminalShell,
   setZoomLevel,
   TERMINAL_FONT_SIZES,
   TERMINAL_SCROLLBACK_PRESETS,
@@ -79,13 +73,6 @@ const SHELL_AUTO = "auto";
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2.0;
 const ZOOM_STEP = 0.05;
-const NOTIFICATION_TEST_DELAY_MS = 2_000;
-
-type NotificationTestState =
-  | OsNotificationResult
-  | "idle"
-  | "waiting"
-  | "sending";
 
 export function GeneralSection() {
   const { mode, setMode } = useTheme();
@@ -93,6 +80,7 @@ export function GeneralSection() {
   const autostart = usePreferencesStore((s) => s.autostart);
   const restoreWindowState = usePreferencesStore((s) => s.restoreWindowState);
   const showHidden = usePreferencesStore((s) => s.showHidden);
+  const sidebarSide = usePreferencesStore((s) => s.sidebarSide);
   const explorerGitDecorations = usePreferencesStore(
     (s) => s.explorerGitDecorations,
   );
@@ -117,23 +105,6 @@ export function GeneralSection() {
     (s) => s.confirmCloseRunningTerminal,
   );
   const zoomLevel = usePreferencesStore((s) => s.zoomLevel);
-  const agentNotifications = usePreferencesStore((s) => s.agentNotifications);
-  const agentNotificationSound = usePreferencesStore(
-    (s) => s.agentNotificationSound,
-  );
-  const [notificationTest, setNotificationTest] =
-    useState<NotificationTestState>("idle");
-  const notificationTestPending =
-    notificationTest === "waiting" || notificationTest === "sending";
-
-  const testNotification = async () => {
-    setNotificationTest("waiting");
-    await new Promise((resolve) =>
-      setTimeout(resolve, NOTIFICATION_TEST_DELAY_MS),
-    );
-    setNotificationTest("sending");
-    setNotificationTest(await testAgentOsNotification(agentNotificationSound));
-  };
 
   useEffect(() => {
     let alive = true;
@@ -225,6 +196,25 @@ export function GeneralSection() {
 
       <div className="flex flex-col gap-2">
         <Label>Explorer</Label>
+        <SettingRow
+          title="Sidebar position"
+          description="Show the file explorer and source control on the left or right of the workspace."
+        >
+          <Select
+            value={sidebarSide}
+            onValueChange={(value) =>
+              void setSidebarSide(value === "right" ? "right" : "left")
+            }
+          >
+            <SelectTrigger className="h-8 w-36 text-[12px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="left">Left</SelectItem>
+              <SelectItem value="right">Right</SelectItem>
+            </SelectContent>
+          </Select>
+        </SettingRow>
         <SettingRow
           title="Show hidden files"
           description="Include dot-prefixed files and folders (.env, .gitignore, .config) in the file explorer and search."
@@ -379,7 +369,7 @@ export function GeneralSection() {
         {(wslDistros.length > 0 || defaultWorkspaceEnv !== "local") && (
           <SettingRow
             title="Workspace environment"
-            description="Where new spaces run, terminal and AI agent alike: Windows or a WSL distro. Existing spaces keep theirs; switch any from the status bar."
+            description="Where new spaces run: Windows or a WSL distro. Existing spaces keep theirs; switch any from the status bar."
           >
             <Select
               value={defaultWorkspaceEnv}
@@ -496,45 +486,6 @@ export function GeneralSection() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label>Agents</Label>
-        <SettingRow
-          title="Coding agent notifications"
-          description="Alert when a coding agent needs your input or finishes. Native notification when Terax is unfocused, in-app otherwise."
-        >
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              disabled={!agentNotifications || notificationTestPending}
-              title={notificationTestTitle(notificationTest)}
-              onClick={() => void testNotification()}
-            >
-              {notificationTestLabel(notificationTest)}
-            </Button>
-            <Switch
-              checked={agentNotifications}
-              disabled={notificationTestPending}
-              onCheckedChange={(v) => {
-                setNotificationTest("idle");
-                void setAgentNotifications(v);
-              }}
-            />
-          </div>
-        </SettingRow>
-        <SettingRow
-          title="Notification sound"
-          description="Play a sound with agent notifications and in-app alerts."
-        >
-          <Switch
-            checked={agentNotificationSound}
-            disabled={!agentNotifications || notificationTestPending}
-            onCheckedChange={(v) => void setAgentNotificationSound(v)}
-          />
-        </SettingRow>
-      </div>
-
-      <div className="flex flex-col gap-2">
         <Label>Startup</Label>
         <div className="flex flex-col gap-2">
           <SettingRow
@@ -567,38 +518,6 @@ function Label({ children }: { children: React.ReactNode }) {
       {children}
     </span>
   );
-}
-
-function notificationTestLabel(status: NotificationTestState): string {
-  switch (status) {
-    case "waiting":
-      return "Switch apps...";
-    case "sending":
-      return "Sending...";
-    case "requested":
-      return "Requested";
-    case "denied":
-      return "Blocked";
-    case "failed":
-      return "Failed";
-    default:
-      return "Test in 2s";
-  }
-}
-
-function notificationTestTitle(status: NotificationTestState): string {
-  switch (status) {
-    case "waiting":
-      return "Switch to another app to verify native delivery";
-    case "requested":
-      return "The native notification was requested";
-    case "denied":
-      return "Notifications are disabled by the system";
-    case "failed":
-      return "Terax could not request a native notification";
-    default:
-      return "Send a native test notification after two seconds";
-  }
 }
 
 function FontFamilyInput({

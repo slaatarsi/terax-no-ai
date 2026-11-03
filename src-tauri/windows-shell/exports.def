@@ -1,0 +1,4 @@
+LIBRARY TeraxShellExtension
+EXPORTS
+    DllGetClassObject PRIVATE
+    DllCanUnloadNow PRIVATE

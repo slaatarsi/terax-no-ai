@@ -2,7 +2,7 @@
   <img src="public/logo.png" width="144" height="144" alt="Terax" />
   <h1>Terax</h1>
 
-  <p><strong>Lightweight Terminal-first AI-native dev workspace.</strong></p>
+  <p><strong>Lightweight terminal-first development workspace.</strong></p>
   <p>
     <a href="https://terax.app">Website</a>
     ·
@@ -36,7 +36,9 @@
 
 ---
 
-Terax is a lightweight open-source terminal-first AI-native development environment (ADE) built on Tauri 2 + Rust and React 19. A native PTY backend with a WebGL renderer, an agentic AI side-panel that runs against your own keys or fully local models, plus a code editor, file explorer, source control with a git graph, and a web preview pane built in. About 7-8 MB on disk. No telemetry. No account.
+Terax is a lightweight open-source terminal-first development workspace built on Tauri 2 + Rust and React 19. It includes a native PTY backend, Ghostty terminal model with WebGPU and WebGL rendering, code editor, file explorer, source control with a Git graph, and web previews. No telemetry. No account.
+
+Built-in AI and agent integrations have been removed. You can still run any CLI manually in a terminal. Existing conversations, saved provider settings, credentials, and external agent configurations are not erased or loaded by this version. Previously installed external hooks are not automatically uninstalled. Translated READMEs may describe the earlier AI-enabled version.
 
 > [!NOTE]
 > Over the past few months, most of my development time went into building [Zephium](https://zephium.app), a new browser-native work environment rebuilt for humans and agents.
@@ -50,7 +52,7 @@ Terax is a lightweight open-source terminal-first AI-native development environm
 <table>
   <tr>
     <td align="center"><img src="docs/web-preview.png" alt="Web preview" /><br/><sub>Web preview of local dev servers</sub></td>
-    <td align="center"><img src="docs/ai-workflow.png" alt="AI window" /><br/><sub>Agentic AI workflow with edit diffs in the code editor</sub></td>
+    <td align="center"><img src="docs/editor.png" alt="Code editor" /><br/><sub>Code editor with language server support</sub></td>
   </tr>
   <tr>
     <td align="center"><img src="docs/themes.png" alt="Themes and background image" style="margin-top: 12px;"/><br/><sub>Custom themes, presets, and background images</sub></td>
@@ -65,7 +67,7 @@ Terax is a lightweight open-source terminal-first AI-native development environm
 
 ### Terminal
 
-- xterm.js with WebGL renderer, multi-tab with background streaming
+- libghostty-vt with WebGPU rendering and a WebGL fallback, multi-tab with background streaming
 - GPU-accelerated block-based terminal with editor-like command input
 - Native PTY backend via `portable-pty` (zsh, bash, pwsh, fish, cmd)
 - Split panels (horizontal and vertical)
@@ -77,8 +79,6 @@ Terax is a lightweight open-source terminal-first AI-native development environm
 ### Code editor
 
 - CodeMirror 6 (supports all popular languages - TS/JS, Rust, Python, Go, C/C++, Java, HTML/CSS, JSON, Markdown, etc.)
-- Inline AI autocomplete with local model support
-- AI edit diffs, accept or reject hunk by hunk
 - Opt-in language server support with diagnostics, navigation, completion, formatting, and custom servers
 - Rendered Markdown plus image, video, audio, and PDF viewing
 - Vim mode
@@ -96,7 +96,6 @@ Terax is a lightweight open-source terminal-first AI-native development environm
 - Catppuccin icon theme
 - Fuzzy search, keyboard navigation, inline rename, context actions
 - Live updates when files change on disk
-- Attach files and selections directly to the AI side-panel
 
 ### Web preview
 
@@ -109,16 +108,6 @@ Terax is a lightweight open-source terminal-first AI-native development environm
 - Create your own themes, share them or import from the community
 - Background images with adjustable opacity and blur
 - Editor theme is independent from the app theme
-
-### AI
-
-- **BYOK providers:** OpenAI, Anthropic, Google (Gemini), Groq, xAI (Grok), Cerebras, OpenRouter, DeepSeek, Mistral, plus any OpenAI-compatible endpoint
-- **Local / offline:** LM Studio, MLX, Ollama
-- **Agentic workflow:** plans, sub-agents, project memory via `TERAX.md`, file read / write / edit / multi-edit / grep / glob, bash with approval gating, background processes
-- **Coding-agent orchestration:** spawn Claude Code in a terminal, inspect its output, and send follow-up work through approval-gated tools
-- **Composer:** prompt snippets via `#handle`, files via `@path`, voice input, attach-to-agent from explorer or selection
-- **Custom agents** with their own system prompt and tool subset
-- **Plan mode** for multi-step work, generates and confirms before doing
 
 ## Install
 
@@ -134,12 +123,6 @@ Latest installers are on the [Releases](https://github.com/crynta/terax-ai/relea
 - **Arch / AUR:** `yay -S terax-bin` (or `paru`, etc.). Tracks the latest release.
 - **NixOS / Nix**: use the official flake - `nix profile install github:crynta/terax-ai` (non-NixOS), or import the flake and add `inputs.terax.packages.${pkgs.system}.terax` to `environment.systemPackages` (NixOS). The `nixosModules.terax` output is also available for a simpler setup.
 - **AppImage:** needs FUSE. Without it: `./Terax_*.AppImage --appimage-extract-and-run`. On Wayland with rendering glitches, try `WEBKIT_DISABLE_DMABUF_RENDERER=1`. Otherwise the `.deb` / `.rpm` packages link against the system GTK stack and tend to be smoother.
-
-## Configure AI
-
-1. Open **Settings -> AI**.
-2. Pick a provider and paste your API key. For local inference, point Terax at your LM Studio / MLX / Ollama endpoint.
-3. Keys are written to the OS keychain via `keyring`. They never touch disk or localStorage.
 
 ## Build from source
 
@@ -166,7 +149,7 @@ cd src-tauri && cargo nextest run --locked                           # or: cargo
 
 ## Tech stack
 
-Tauri 2, Rust, `portable-pty`, React 19, TypeScript, Vite, xterm.js, CodeMirror 6, Vercel AI SDK v6, Tailwind v4, shadcn/ui, Zustand.
+Tauri 2, Rust, `portable-pty`, libghostty-vt WASM, React 19, TypeScript, Vite, CodeMirror 6, Tailwind v4, shadcn/ui, Zustand.
 
 ## Contributing
 

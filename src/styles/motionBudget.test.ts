@@ -26,12 +26,10 @@ describe("global motion budget", () => {
     }
   });
 
-  it("covers the spinner and pulse utilities and the shimmer", () => {
+  it("covers the spinner and pulse utilities", () => {
     const names = infiniteAnimations(css).join("\n");
     expect(names).toContain("--animate-spin");
     expect(names).toContain("--animate-pulse");
-    expect(names).toContain("terax-shimmer");
-    expect(names).toContain("terax-blink");
   });
 
   it("pauses all animations while the window is inactive", () => {
@@ -42,15 +40,9 @@ describe("global motion budget", () => {
     expect(css).toMatch(/html\[data-window-inactive\] \*::after/);
   });
 
-  it("keeps a pending approval's pulse finite", () => {
-    const rule = css.match(/\.terax-attention-pulse\s*\{([^}]*)\}/)?.[1] ?? "";
-    expect(rule).toMatch(/animation:/);
-    expect(rule).not.toMatch(/infinite/);
-  });
-
   it("removes the repeating indicators under prefers-reduced-motion", () => {
     const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion"));
-    expect(reduced).toMatch(/\.terax-shimmer\s*\{[^}]*animation:\s*none/);
-    expect(reduced).toMatch(/\.terax-blink[^{]*\{[^}]*animation:\s*none/);
+    expect(reduced).toMatch(/--animate-spin:\s*none/);
+    expect(reduced).toMatch(/--animate-pulse:\s*none/);
   });
 });

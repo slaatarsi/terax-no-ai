@@ -7,12 +7,14 @@ pub const METHOD_PING: &str = "ping";
 pub const METHOD_CAPABILITIES: &str = "capabilities";
 pub const METHOD_IDENTIFY: &str = "identify";
 pub const METHOD_OPEN: &str = "open";
+pub const METHOD_OPEN_DIRECTORY: &str = "open_directory";
 pub const SERVER_RESPONSE_ID: &str = "server";
 pub const METHODS: &[&str] = &[
     METHOD_PING,
     METHOD_CAPABILITIES,
     METHOD_IDENTIFY,
     METHOD_OPEN,
+    METHOD_OPEN_DIRECTORY,
 ];
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
@@ -112,6 +114,12 @@ pub struct FrontendResponse {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct OpenDirectoryParams {
+    pub path: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct OpenParams {
     pub path: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -173,7 +181,10 @@ mod tests {
 
     #[test]
     fn methods_catalog_matches_the_wire_literals() {
-        assert_eq!(METHODS, &["ping", "capabilities", "identify", "open"]);
+        assert_eq!(
+            METHODS,
+            &["ping", "capabilities", "identify", "open", "open_directory"]
+        );
     }
 
     #[test]
@@ -221,9 +232,7 @@ mod tests {
 
     #[test]
     fn caller_context_round_trips_with_and_without_a_pane() {
-        let with_pane = CallerContext {
-            pane_id: Some(3),
-        };
+        let with_pane = CallerContext { pane_id: Some(3) };
         let value = serde_json::to_value(&with_pane).unwrap();
         assert_eq!(value, json!({ "pane_id": 3 }));
         let back: CallerContext = serde_json::from_value(value).unwrap();

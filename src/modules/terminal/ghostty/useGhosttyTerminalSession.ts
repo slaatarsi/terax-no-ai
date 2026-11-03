@@ -63,6 +63,7 @@ type GhosttySession = {
   readonly leafId: number;
   readonly backend: GhosttyBackend;
   initialCwd: string | undefined;
+  requireCwd: boolean;
   lastCwd: string | null;
   model: GhosttyTerminalModelApi | null;
   surface: GhosttySurface | null;
@@ -109,6 +110,7 @@ type Options = {
   visible: boolean;
   focused: boolean;
   initialCwd?: string;
+  requireCwd?: boolean;
   blocks?: boolean;
   onExit?: (code: number) => void;
   onCwd?: (cwd: string) => void;
@@ -122,6 +124,7 @@ export function useGhosttyTerminalSession({
   visible,
   focused,
   initialCwd,
+  requireCwd = false,
   blocks = false,
   onSearchReady,
   onExit,
@@ -149,6 +152,7 @@ export function useGhosttyTerminalSession({
   const callbackRef = useRef({ onSearchReady, onExit, onCwd });
   callbackRef.current = { onSearchReady, onExit, onCwd };
   const initialCwdRef = useRef(initialCwd);
+  const requireCwdRef = useRef(requireCwd);
 
   useEffect(() => {
     const session = ensureSession(
@@ -156,6 +160,7 @@ export function useGhosttyTerminalSession({
       backend,
       initialCwdRef.current,
       fontRef.current,
+      requireCwdRef.current,
     );
     if (blocks) ensureGhosttyBlocks(leafId);
     const node = container.current;
@@ -190,7 +195,13 @@ export function useGhosttyTerminalSession({
   }, [leafId, backend, font]);
 
   useEffect(() => {
-    const session = ensureSession(leafId, backend, initialCwdRef.current);
+    const session = ensureSession(
+      leafId,
+      backend,
+      initialCwdRef.current,
+      undefined,
+      requireCwdRef.current,
+    );
     session.visible = visible;
     session.focused = focused;
     setLeafPresentation(leafId, visible, focused);
@@ -515,6 +526,7 @@ function ensureSession(
   backend: GhosttyBackend,
   initialCwd?: string,
   font?: TerminalFontSpec,
+  requireCwd = false,
 ): GhosttySession {
   const existing = sessions.get(leafId);
   if (existing) {
@@ -535,6 +547,7 @@ function ensureSession(
     leafId,
     backend,
     initialCwd,
+    requireCwd,
     lastCwd: null,
     model: null,
     surface: null,
@@ -599,6 +612,11 @@ async function initializeSessionGeneration(
   session: GhosttySession,
   generation: number,
 ): Promise<void> {
+  // Restored tabs start before App hydration finishes; spawn with saved prefs (shell), not defaults.
+  await usePreferencesStore
+    .getState()
+    .init()
+    .catch(() => {});
   const preferences = usePreferencesStore.getState();
   const startup = createStartupTimings();
   session.startup = startup;
@@ -819,6 +837,7 @@ async function initializeSessionGeneration(
     !!ghosttyBlocks(session.leafId),
     preferences.terminalShell || undefined,
     session.leafId,
+    session.requireCwd,
   );
   if (session.disposed || generation !== session.generation) {
     await pty.close();

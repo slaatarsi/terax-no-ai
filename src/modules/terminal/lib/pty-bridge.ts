@@ -1,8 +1,4 @@
 import {
-  clearAgentActivity,
-  ensureAgentActivityListener,
-} from "@/modules/terminal/lib/agentActivity";
-import {
   type PtyStreamTransport,
   PtyOutputHub,
 } from "@/modules/terminal/lib/PtyOutputHub";
@@ -106,6 +102,7 @@ export async function openPty(
   blocks?: boolean,
   shell?: string,
   paneId?: number,
+  requireCwd = false,
 ): Promise<PtySession> {
   const stream = outputHub();
   let id: number | null = null;
@@ -143,7 +140,6 @@ export async function openPty(
     if (id !== null) {
       stream.unregister(id);
       receivers.delete(id);
-      clearAgentActivity(id);
       if (paneId !== undefined) unbindLeafPty(paneId, id);
     }
     if (notice !== undefined) toast.dismiss(notice);
@@ -152,12 +148,12 @@ export async function openPty(
   const presentation =
     paneId === undefined ? undefined : leafPresentationClass(paneId);
   try {
-    await ensureAgentActivityListener();
     await stream.ensureStream();
     id = await invoke<number>("pty_open", {
       cols,
       rows,
       cwd: cwd ?? null,
+      ...(requireCwd ? { requireCwd: true } : {}),
       workspace: currentWorkspaceEnv(),
       blocks: blocks ?? false,
       shell: shell ?? null,
@@ -169,9 +165,7 @@ export async function openPty(
     throw error;
   }
   const sessionId = id;
-  if (released) {
-    clearAgentActivity(sessionId);
-  } else {
+  if (!released) {
     receivers.set(sessionId, receiver);
     // Native holds this terminal's output until it is registered here, so no
     // frame can precede this call.

@@ -39,7 +39,7 @@ Security properties:
 - Request ids are bounded and restricted to log-safe ASCII.
 - Connections and pending UI requests are capped at 32, with bounded read, write, and UI response timeouts.
 - The CLI verifies that a cache descriptor still names a live Terax process before sending its token.
-- File paths are canonicalized and required to reference a regular file inside an authorized workspace before the editor is opened.
+- File paths are canonicalized and required to reference a regular file inside an authorized workspace before the editor is opened. The separate `open_directory` operation deliberately authorizes its explicitly requested directory as a workspace; authenticated token holders therefore have the same directory-opening authority as a user-selected terminal.
 - The descriptor is removed only when it still belongs to the exiting process, so an older instance cannot delete a newer instance's endpoint.
 
 The token is injected into Terax-spawned native shells together with `TERAX_PANE_ID`. Child coding agents inherit the caller context intentionally, which gives them the same local UI-control capability as the terminal that launched them. Tokens must never be logged or added to command output.
@@ -62,7 +62,7 @@ The release profile uses one codegen unit, fat LTO, size optimization, abort-on-
 
 - WSL panes do not receive the control credentials or CLI launcher yet. Windows path translation and WSL networking must be implemented and tested together.
 - Terax does not yet install a global command for external Terminal.app, PowerShell, or other terminals. The bundled helper and cache descriptor already support that future installer step.
-- The CLI does not launch a stopped Terax app yet.
+- Ordinary file/inspection commands require a running app. The Windows-only internal `open-directory -- <absolute directory>` entry point can start the installed GUI and then submit `open_directory` after restoration. See [Windows Explorer integration](windows-explorer.md); its signed-install acceptance is still pending.
 - Split, tab, agent, screen-read, and input commands are not part of protocol version 1 yet.
 
 These limits are explicit so unsupported paths fail as unavailable instead of silently targeting the wrong pane or exposing a credential for a command that cannot connect.

@@ -14,8 +14,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { AgentIcon } from "@/modules/agents/lib/agentIcon";
-import type { AgentLaunchRequest } from "@/modules/agents/lib/launcher";
 import {
   ALL_LANGUAGES,
   EXPOSED_LANGUAGES,
@@ -23,21 +21,14 @@ import {
 import { resolveDisplayName } from "@/modules/editor/lib/languageResolver";
 import { FileIcon } from "@/modules/explorer/FileIcon";
 import {
-  leafIds,
-  ptyIdForLeaf,
-  useAgentActivityStore,
-} from "@/modules/terminal";
-import {
   ArrowRight01Icon,
   Cancel01Icon,
   CancelCircleIcon,
-  CheckmarkCircle01Icon,
   Clock01Icon,
   ComputerTerminal02Icon,
   GitCompareIcon,
   Globe02Icon,
   IncognitoIcon,
-  Message02Icon,
   PencilEdit02Icon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
@@ -50,10 +41,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { useShallow } from "zustand/react/shallow";
-import { selectTabAgentStatus } from "./lib/tabAgentStatus";
 import { labelFor } from "./lib/tabLabel";
-import type { EditorTab, Tab, TerminalTab } from "./lib/useTabs";
+import type { EditorTab, Tab } from "./lib/useTabs";
 import { NewTabMenu } from "./NewTabMenu";
 
 type Props = {
@@ -66,7 +55,6 @@ type Props = {
   onNewPreview: () => void;
   onNewEditor: () => void;
   onNewGitGraph: () => void;
-  onLaunchAgents: (request: AgentLaunchRequest) => void;
   onClose: (id: number) => void;
   /** Chrome-style: close every tab to the right of the given tab. */
   onCloseTabsToRight: (id: number) => void;
@@ -92,7 +80,6 @@ export function TabBar({
   onNewPreview,
   onNewEditor,
   onNewGitGraph,
-  onLaunchAgents,
   onClose,
   onCloseTabsToRight,
   onCloseOtherTabs,
@@ -592,7 +579,6 @@ export function TabBar({
           onNewPreview={onNewPreview}
           onNewEditor={onNewEditor}
           onNewGitGraph={onNewGitGraph}
-          onLaunchAgents={onLaunchAgents}
         />
       </div>
     </div>
@@ -608,54 +594,7 @@ function DropIndicator() {
   );
 }
 
-/** Live pty ids behind a terminal tab; resolved at read time, not render time. */
-function terminalPtyIds(tab: TerminalTab): number[] {
-  const ptyIds: number[] = [];
-  for (const leaf of leafIds(tab.paneTree)) {
-    const id = ptyIdForLeaf(leaf);
-    if (id !== null) ptyIds.push(id);
-  }
-  return ptyIds;
-}
-
-/**
- * Agent-aware terminal tab icon. The selector reduces the global activity maps
- * to this tab's own `{ state, agent }`, and `useShallow` keeps that result
- * stable, so an agent signal on one tab re-renders only that tab's icon.
- * Non-terminal tabs never reach this component and subscribe to nothing.
- */
-function TerminalTabIcon({ tab }: { tab: TerminalTab }) {
-  const agentStatus = useAgentActivityStore(
-    useShallow((s) => selectTabAgentStatus(s, terminalPtyIds(tab))),
-  );
-  if (agentStatus.state === "attention") {
-    return (
-      <HugeiconsIcon
-        icon={Message02Icon}
-        size={14}
-        strokeWidth={2}
-        className="shrink-0"
-      />
-    );
-  }
-  if (agentStatus.state === "finished") {
-    return (
-      <HugeiconsIcon
-        icon={CheckmarkCircle01Icon}
-        size={14}
-        strokeWidth={2}
-        className="shrink-0"
-      />
-    );
-  }
-  if (
-    (agentStatus.state === "working" || agentStatus.state === "idle") &&
-    agentStatus.agent
-  ) {
-    return (
-      <AgentIcon agent={agentStatus.agent} size={14} className="shrink-0" />
-    );
-  }
+function TerminalTabIcon() {
   return (
     <HugeiconsIcon
       icon={ComputerTerminal02Icon}
@@ -683,16 +622,6 @@ export function TabIcon({ tab }: { tab: Tab }) {
     return (
       <HugeiconsIcon
         icon={Globe02Icon}
-        size={14}
-        strokeWidth={2}
-        className="shrink-0"
-      />
-    );
-  }
-  if (tab.kind === "ai-diff") {
-    return (
-      <HugeiconsIcon
-        icon={GitCompareIcon}
         size={14}
         strokeWidth={2}
         className="shrink-0"
@@ -729,7 +658,7 @@ export function TabIcon({ tab }: { tab: Tab }) {
       />
     );
   }
-  return <TerminalTabIcon tab={tab} />;
+  return <TerminalTabIcon />;
 }
 
 function TabRenameInput({

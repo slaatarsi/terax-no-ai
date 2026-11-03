@@ -1,4 +1,4 @@
-import { native } from "@/modules/ai/lib/native";
+import { native } from "@/lib/native";
 import { usePreferencesStore } from "@/modules/settings/preferences";
 import type { Tab } from "@/modules/tabs";
 import { DEFAULT_SPACE_ID } from "@/modules/tabs/lib/useTabs";
@@ -52,10 +52,11 @@ export function useSpacesBoot({
 
     void (async () => {
       try {
+        const explicitDirectory = await native.launchDirectoryRequest();
         const { spaces, activeId, states } = await loadAll();
 
         if (spaces.length === 0) {
-          const root = launchCwd ?? home ?? null;
+          const root = explicitDirectory ?? launchCwd ?? home ?? null;
           // Hydrate prefs before reading the saved workspace env.
           await usePreferencesStore
             .getState()
@@ -65,15 +66,23 @@ export function useSpacesBoot({
             id: DEFAULT_SPACE_ID,
             name: "Default",
             root,
-            env: parseWorkspaceScopeKey(
-              usePreferencesStore.getState().defaultWorkspaceEnv,
-            ),
+            env: explicitDirectory
+              ? { kind: "local" }
+              : parseWorkspaceScopeKey(
+                  usePreferencesStore.getState().defaultWorkspaceEnv,
+                ),
             createdAt: Date.now(),
             updatedAt: Date.now(),
           };
           await saveSpacesList([meta]);
           await saveActiveId(DEFAULT_SPACE_ID);
           setActiveSpaceForNewTabs(DEFAULT_SPACE_ID);
+          if (explicitDirectory) {
+            await adoptWorkspaceEnv(meta.env);
+            const tab = freshTerminalTab(meta.id, explicitDirectory, allocId);
+            if (tab.paneTree.kind === "leaf") tab.paneTree.requireCwd = true;
+            replaceTabs([tab], tab.id);
+          }
           useSpaces.getState().hydrate([meta], DEFAULT_SPACE_ID);
           return;
         }

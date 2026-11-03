@@ -38,6 +38,9 @@ type UseControlBridgeOptions = {
   activeTabIdRef: RefObject<number>;
   activeSpaceIdRef: RefObject<string | null>;
   onOpen: (request: OpenRequest & { spaceId: string }) => number | null;
+  onOpenDirectory: (
+    path: string,
+  ) => Promise<{ spaceId: string; tabId: number }>;
 };
 
 class RequestError extends Error {
@@ -102,6 +105,7 @@ export function useControlBridge({
   activeTabIdRef,
   activeSpaceIdRef,
   onOpen,
+  onOpenDirectory,
 }: UseControlBridgeOptions): void {
   useEffect(() => {
     if (!ready) return;
@@ -118,6 +122,33 @@ export function useControlBridge({
         );
         if (request.method === "identify") {
           await respond(request.id, { ok: true, result: context });
+          return;
+        }
+        if (request.method === "open_directory") {
+          const { path } = parseOpenRequest(request.params);
+          const target = await onOpenDirectory(path);
+          const window = getCurrentWindow();
+          let focused = false;
+          try {
+            await window.show();
+            await window.unminimize();
+            await window.setFocus();
+            focused = true;
+          } catch (error) {
+            console.warn("[terax] could not focus directory target:", error);
+          }
+          await new Promise<void>((resolve) =>
+            requestAnimationFrame(() => resolve()),
+          );
+          await respond(request.id, {
+            ok: true,
+            result: {
+              path,
+              space_id: target.spaceId,
+              tab_id: target.tabId,
+              focused,
+            },
+          });
           return;
         }
         if (request.method === "open") {
@@ -195,5 +226,12 @@ export function useControlBridge({
         console.error("[terax] control bridge cleanup failed:", error);
       });
     };
-  }, [ready, tabsRef, activeTabIdRef, activeSpaceIdRef, onOpen]);
+  }, [
+    ready,
+    tabsRef,
+    activeTabIdRef,
+    activeSpaceIdRef,
+    onOpen,
+    onOpenDirectory,
+  ]);
 }

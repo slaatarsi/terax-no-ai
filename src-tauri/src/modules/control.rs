@@ -12,8 +12,9 @@ use serde_json::{json, Value};
 use tauri::{Emitter, Manager};
 use terax_control_protocol::{
     ControlDescriptor, ControlRequest, ControlResponse, FrontendRequest, FrontendResponse,
-    OpenParams, MAX_MESSAGE_BYTES, METHODS, METHOD_CAPABILITIES, METHOD_IDENTIFY, METHOD_OPEN,
-    METHOD_PING, PROTOCOL_VERSION, SERVER_RESPONSE_ID,
+    OpenDirectoryParams, OpenParams, MAX_MESSAGE_BYTES, METHODS, METHOD_CAPABILITIES,
+    METHOD_IDENTIFY, METHOD_OPEN, METHOD_OPEN_DIRECTORY, METHOD_PING, PROTOCOL_VERSION,
+    SERVER_RESPONSE_ID,
 };
 
 use crate::modules::{fs, workspace};
@@ -339,6 +340,34 @@ fn route_request(
             }),
         ),
         METHOD_IDENTIFY => forward_to_frontend(request, app, state),
+        METHOD_OPEN_DIRECTORY => {
+            let params = serde_json::from_value::<OpenDirectoryParams>(request.params.clone());
+            let path = match params {
+                Ok(params) => match normalize_directory_target(&params.path) {
+                    Ok(path) => path,
+                    Err((code, message)) => {
+                        return ControlResponse::failure(request.id, code, message)
+                    }
+                },
+                Err(error) => {
+                    return ControlResponse::failure(
+                        request.id,
+                        "invalid_params",
+                        error.to_string(),
+                    )
+                }
+            };
+            // An explicit directory-open is a user-chosen workspace, not an editor read.
+            if let Err(error) = app.state::<workspace::WorkspaceRegistry>().authorize(&path) {
+                return ControlResponse::failure(
+                    request.id,
+                    "path_not_accessible",
+                    error.to_string(),
+                );
+            }
+            request.params = json!({ "path": fs::to_canon(path) });
+            forward_to_frontend(request, app, state)
+        }
         METHOD_OPEN => {
             let params: OpenParams = match serde_json::from_value(request.params.clone()) {
                 Ok(params) => params,
@@ -401,6 +430,22 @@ fn require_authorized_open_target(
         ));
     }
     Ok(())
+}
+
+pub(crate) fn normalize_directory_target(path: &str) -> Result<PathBuf, (&'static str, String)> {
+    if path.is_empty() || path.len() > 48 * 1024 || path.contains('\0') {
+        return Err(("invalid_params", "invalid directory path".into()));
+    }
+    let path = Path::new(path);
+    if !path.is_absolute() {
+        return Err(("invalid_params", "directory path must be absolute".into()));
+    }
+    let canonical = std::fs::canonicalize(path).map_err(|e| ("path_not_found", e.to_string()))?;
+    if !canonical.is_dir() {
+        return Err(("not_a_directory", "path is not a directory".into()));
+    }
+    std::fs::read_dir(&canonical).map_err(|e| ("path_not_accessible", e.to_string()))?;
+    Ok(canonical)
 }
 
 fn normalize_open_target(
@@ -845,6 +890,35 @@ mod tests {
         let error = normalize_open_target(open_params(temp.path().to_string_lossy().into_owned()))
             .expect_err("reject directory");
         assert_eq!(error.0, "not_a_file");
+    }
+
+    #[test]
+    fn directory_open_validates_before_authorization() {
+        let temp = tempfile::tempdir().unwrap();
+        let directory = temp.path().join("مشروع & space");
+        std::fs::create_dir(&directory).unwrap();
+        assert_eq!(
+            normalize_directory_target(directory.to_str().unwrap()).unwrap(),
+            std::fs::canonicalize(&directory).unwrap()
+        );
+        let file = directory.join("file.txt");
+        std::fs::write(&file, "test").unwrap();
+        assert_eq!(
+            normalize_directory_target(file.to_str().unwrap())
+                .unwrap_err()
+                .0,
+            "not_a_directory"
+        );
+        assert!(normalize_directory_target("").is_err());
+        assert!(normalize_directory_target("relative").is_err());
+        std::fs::remove_file(file).unwrap();
+        std::fs::remove_dir(&directory).unwrap();
+        assert_eq!(
+            normalize_directory_target(directory.to_str().unwrap())
+                .unwrap_err()
+                .0,
+            "path_not_found"
+        );
     }
 
     #[test]

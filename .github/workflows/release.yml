@@ -30,6 +30,8 @@ jobs:
             rust-target: ""
 
     runs-on: ${{ matrix.platform }}
+    env:
+      TERAX_SHELL_PUBLISHER: ${{ vars.TERAX_SHELL_PUBLISHER }}
     steps:
       - uses: actions/checkout@v7
 
@@ -73,6 +75,60 @@ jobs:
           mkdir -p "$HOME/private_keys"
           printf '%s' "$KEY_CONTENT" > "$HOME/private_keys/AuthKey.p8"
           echo "APPLE_API_KEY_PATH=$HOME/private_keys/AuthKey.p8" >> "$GITHUB_ENV"
+
+      # The sparse package must be trusted BEFORE it is embedded in either installer.
+      - name: Build Windows Explorer payload
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        env:
+          SHELL_SIGNING_CONFIGURATION: ${{ vars.SIGNPATH_SHELL_ARTIFACT_CONFIGURATION_SLUG }}
+        run: |
+          if ($env:GITHUB_REF.StartsWith('refs/tags/') -and (-not $env:TERAX_SHELL_PUBLISHER -or -not $env:SHELL_SIGNING_CONFIGURATION)) {
+            throw 'Explorer signing is not configured. Set TERAX_SHELL_PUBLISHER to the signing certificate subject and configure SIGNPATH_SHELL_ARTIFACT_CONFIGURATION_SLUG. See docs/architecture/windows-explorer.md.'
+          }
+          pnpm build:windows-shell
+          if ($LASTEXITCODE -ne 0) { throw 'Explorer build failed' }
+          $payload = 'src-tauri/windows-shell/generated/payload'
+          $identity = Get-Content "$payload/identity.json" -Raw | ConvertFrom-Json
+          New-Item native-shell-signing -ItemType Directory -Force | Out-Null
+          Copy-Item "$payload/$($identity.version)/TeraxShellExtension.dll" native-shell-signing/
+          Copy-Item "$payload/TeraxExplorer.msix" native-shell-signing/
+
+      - name: Upload unsigned Explorer signing artifact
+        id: upload-shell
+        if: matrix.platform == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-explorer-unsigned
+          path: native-shell-signing/
+          if-no-files-found: error
+
+      - name: Sign Explorer DLL and sparse MSIX
+        if: matrix.platform == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: 'df665bf4-9b76-41ae-9596-1ba3a23010aa'
+          project-slug: 'terax-ai'
+          signing-policy-slug: 'release-signing'
+          artifact-configuration-slug: ${{ vars.SIGNPATH_SHELL_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ steps.upload-shell.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed-shell
+
+      - name: Verify and stage signed Explorer payload
+        if: matrix.platform == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $payload = 'src-tauri/windows-shell/generated/payload'
+          $identity = Get-Content "$payload/identity.json" -Raw | ConvertFrom-Json
+          Copy-Item signed-shell/TeraxShellExtension.dll "$payload/$($identity.version)/TeraxShellExtension.dll" -Force
+          Copy-Item signed-shell/TeraxExplorer.msix "$payload/TeraxExplorer.msix" -Force
+          & ./src-tauri/windows-shell/build.ps1 -VerifySigned
+          if ($LASTEXITCODE -ne 0) { throw 'Explorer signature verification failed' }
+          'TERAX_SHELL_SIGNED_READY=1' | Out-File $env:GITHUB_ENV -Append
 
       - id: tauri
         uses: tauri-apps/tauri-action@v1
