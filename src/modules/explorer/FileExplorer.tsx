@@ -11,6 +11,7 @@ import {
   FileAddIcon,
   Folder01Icon,
   FolderAddIcon,
+  ListCollapseIcon,
   Refresh01Icon,
   Search01Icon,
 } from "@hugeicons/core-free-icons";
@@ -716,6 +717,17 @@ export const FileExplorer = memo(
             title="New folder"
           >
             <HugeiconsIcon icon={FolderAddIcon} size={13} strokeWidth={2} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 text-muted-foreground hover:text-foreground"
+            onClick={tree.collapseAll}
+            disabled={tree.expanded.size === 0}
+            title="Collapse all folders"
+            aria-label="Collapse all folders"
+          >
+            <HugeiconsIcon icon={ListCollapseIcon} size={13} strokeWidth={2} />
           </Button>
           <Button
             variant="ghost"

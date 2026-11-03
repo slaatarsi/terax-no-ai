@@ -385,6 +385,11 @@ export function useFileTree(rootPath: string | null, options?: Options) {
     [fetchChildren, addWatch, removeWatch],
   );
 
+  const collapseAll = useCallback(() => {
+    for (const path of expandedRef.current) removeWatch(path);
+    setExpanded(new Set());
+  }, [removeWatch]);
+
   const expand = useCallback(
     (path: string) => {
       if (expandedRef.current.has(path)) return;
@@ -608,6 +613,7 @@ export function useFileTree(rootPath: string | null, options?: Options) {
     pendingCreate,
     renaming,
     toggle,
+    collapseAll,
     expand,
     refresh,
     beginCreate,
